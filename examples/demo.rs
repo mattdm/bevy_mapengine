@@ -64,7 +64,8 @@ fn setup(
 
     // This does two things: adds the TextureAtlas we just created
     // to the global Resource, and gets a Handle to that TextureAtlas
-    // which we can use
+    // which we can use later when creating Entities that represent
+    // map cells.
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     // And now we create an Entity with SpriteSheetBundle. Bundles are
