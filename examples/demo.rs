@@ -64,7 +64,7 @@ fn setup(
 
     // This does two things: adds the TextureAtlas we just created
     // to the global Resource, and gets a Handle to that TextureAtlas
-    // which we can use to
+    // which we can use
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     // And now we create an Entity with SpriteSheetBundle. Bundles are
@@ -75,27 +75,10 @@ fn setup(
     // for a sprite sheet, plus of course the texture_atlas_handle we are
     // giving it now. We could also tack with() calls to the end of
     // the spawn command to add additional Components.
-    commands
-        .spawn(SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            ..Default::default()
-        })
-        // this is just for testing
-        .with(Timer::from_seconds(1.0, true));
-}
-
-fn animate_sprite_system(
-    time: Res<Time>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
-) {
-    for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
-        timer.tick(time.delta_seconds());
-        if timer.finished() {
-            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-            sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
-        }
-    }
+    commands.spawn(SpriteSheetBundle {
+        texture_atlas: texture_atlas_handle,
+        ..Default::default()
+    });
 }
 
 fn main() {
@@ -124,8 +107,6 @@ fn main() {
         // Now, we are finally on to our own code — that is, stuff here in this demo.
         // This is a added as a "startup system", which runs only once at the beginning.
         .add_startup_system(setup.system())
-        // test
-        .add_system(animate_sprite_system.system())
         // And this, of course, fires off the actual game loop.
         .run()
 }
