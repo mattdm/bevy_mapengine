@@ -19,6 +19,82 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
 
+/// This function is called as a Bevy startup function — see the App
+/// builder in main, below. The name `setup` is not magical, but it's
+/// a straightforward-enough convention.
+///
+/// Part of Bevy's magic is that the app is generated such that system
+/// like this one get "fed" various information automatically based on
+/// the parameters you give it. Here, we are getting Commands, which
+/// be used to spawn or remove Elements from the World, plus two global
+/// Res(ources): an AssetServer and a collection of Assets of type
+/// TextureAtlas. The former is used to load a texture from our on-disk
+/// sample tilemap image, and the later then store a handles to the
+/// loaded texture and a list of rectangular areas within that texture
+/// which can be used for individual Sprites. Other systems might use
+/// Query to get access to selected Entities stored in the World.
+///
+/// (Where does this "World" come from? We don't need to set it up; it is
+/// created as part of the App in main, below.)
+fn setup(
+    commands: &mut Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
+    // This sets up the default 2d camera, which has an orthgraphic (staight ahead,
+    // everything square-on) view.
+    commands.spawn(Camera2dBundle::default());
+
+    // The asset server defaults to looking in the `assets` directory. You
+    // can do some fancy things like automatically loading changes from disk,
+    // but we're not going for any of that here (yet, at least).
+    let demo_tilesheet_handle = asset_server.load("medieval_tilesheet.png");
+
+    // We're loading our texture_atlas with an image which happens to have
+    // 128×128 pixel tiles with 64 pixels of padding in between. And Bevy
+    // has a function to load into a texture map from an image formatted that
+    // that way, which is super-handy! ("18" and "7" are columns and rows.)
+    let texture_atlas = TextureAtlas::from_grid_with_padding(
+        demo_tilesheet_handle,
+        Vec2::new(12.0, 128.0),
+        18,
+        7,
+        Vec2::new(64.0, 64.0),
+    );
+
+    // This does two things: adds the TextureAtlas we just created
+    // to the global Resource, and gets a Handle to that TextureAtlas
+    // which we can use to
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
+    // And now we create an Entity with SpriteSheetBundle. Bundles are
+    // collections of Components, and this bundle has stuff that tells
+    // the built-in RenderPlugin (part of DefaultPlugins) to actually
+    // draw this thing, and how. Note that this is just Rust — the bundle
+    // is a struct, and the default() part fills in the standard stuff
+    // for a sprite sheet, plus of course the texture_atlas_handle we are
+    // giving it now. We could also tack with() calls to the end of
+    // the spawn command to add additional Components.
+    commands.spawn(SpriteSheetBundle {
+        texture_atlas: texture_atlas_handle,
+        ..Default::default()
+    });
+}
+
+fn animate_sprite_system(
+    time: Res<Time>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+) {
+    for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
+        timer.tick(time.delta_seconds());
+        if timer.finished() {
+            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+            sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
+        }
+    }
+}
+
 fn main() {
     App::build()
         // The window is created by WindowPlugin. This is a global resource
@@ -40,7 +116,13 @@ fn main() {
         // These two collect and print frame count statistics to the console
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(PrintDiagnosticsPlugin::default())
-        // this is a built-in-to-Bevy handy keyboard exit function
+        // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
+        // Now, we are finally on to our own code — that is, stuff here in this demo.
+        // This is a added as a "startup system", which runs only once at the beginning.
+        .add_startup_system(setup.system())
+        // test
+        .add_system(animate_sprite_system.system())
+        // And this, of course, fires off the actual game loop.
         .run()
 }
