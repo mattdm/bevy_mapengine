@@ -81,7 +81,7 @@ fn setup(
             ..Default::default()
         })
         // this is just for testing
-        .with(Timer::from_seconds(0.1, true));
+        .with(Timer::from_seconds(1.0, true));
 }
 
 fn animate_sprite_system(
