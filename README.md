@@ -53,6 +53,7 @@ Medium-term
 After that...
 -------------
 
+* (Optional) Automatic selection of border tile images for prettiness
 * Pathfinding?
   - ideally integration rather than diy
 * Collision detection
