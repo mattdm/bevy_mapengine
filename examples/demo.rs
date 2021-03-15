@@ -37,5 +37,6 @@ fn main() {
         // These two collect and print frame count statistics
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(PrintDiagnosticsPlugin::default())
+        .add_system(exit_on_esc_system.system())
         .run()
 }
