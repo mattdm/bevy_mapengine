@@ -21,6 +21,9 @@ use bevy::input::system::exit_on_esc_system;
 
 fn main() {
     App::build()
+        // The window is created by WindowPlugin. This is a global resource
+        // which that plugin looks for to find its configuration. This is a
+        // common Bevy pattern for configuring plugins.
         .add_resource(WindowDescriptor {
             title: "Bevy Mapengine Demo".to_string(),
             width: 1280.,
@@ -34,9 +37,10 @@ fn main() {
             // We're not using audio, and gltf is for 3d scenes.
             group.disable::<AudioPlugin>().disable::<GltfPlugin>()
         })
-        // These two collect and print frame count statistics
+        // These two collect and print frame count statistics to the console
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(PrintDiagnosticsPlugin::default())
+        // this is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
         .run()
 }
