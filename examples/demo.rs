@@ -14,7 +14,7 @@ use bevy::window::WindowMode;
 use bevy::{audio::AudioPlugin, gltf::GltfPlugin};
 
 // Built-in Bevy plugins to print FPS to console.
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
+//use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
@@ -68,14 +68,18 @@ fn setup(
     // map cells.
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    // And now we create an Entity with SpriteSheetBundle. Bundles are
-    // collections of Components, and this bundle has stuff that tells
-    // the built-in RenderPlugin (part of DefaultPlugins) to actually
-    // draw this thing, and how. Note that this is just Rust — the bundle
-    // is a struct, and the default() part fills in the standard stuff
-    // for a sprite sheet, plus of course the texture_atlas_handle we are
-    // giving it now. We could also tack with() calls to the end of
-    // the spawn command to add additional Components.
+    // And now we create a grid of Entities with SpriteSheetBundle.
+    //
+    // Bundles are collections of Components, and this bundle has stuff
+    // that tells the built-in RenderPlugin (part of DefaultPlugins) to
+    // actually draw this thing, and how. Note that this is just Rust —
+    // the bundle is a struct, and the default() part fills in the
+    // standard stuff for a sprite sheet, plus of course the
+    // texture_atlas_handle we are giving it now.
+    //
+    // We could also tack .with() calls to the end of the spawn command
+    // to add additional Components beyond those in the bundle.
+
     commands.spawn(SpriteSheetBundle {
         texture_atlas: texture_atlas_handle,
         ..Default::default()
@@ -101,8 +105,8 @@ fn main() {
             group.disable::<AudioPlugin>().disable::<GltfPlugin>()
         })
         // These two collect and print frame count statistics to the console
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(PrintDiagnosticsPlugin::default())
+        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
+        //.add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
         // Now, we are finally on to our own code — that is, stuff here in this demo.
