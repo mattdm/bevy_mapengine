@@ -56,7 +56,7 @@ fn setup(
     // that way, which is super-handy! ("18" and "7" are columns and rows.)
     let texture_atlas = TextureAtlas::from_grid_with_padding(
         demo_tilesheet_handle,
-        Vec2::new(12.0, 128.0),
+        Vec2::new(128.0, 128.0),
         18,
         7,
         Vec2::new(64.0, 64.0),
@@ -75,10 +75,13 @@ fn setup(
     // for a sprite sheet, plus of course the texture_atlas_handle we are
     // giving it now. We could also tack with() calls to the end of
     // the spawn command to add additional Components.
-    commands.spawn(SpriteSheetBundle {
-        texture_atlas: texture_atlas_handle,
-        ..Default::default()
-    });
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas: texture_atlas_handle,
+            ..Default::default()
+        })
+        // this is just for testing
+        .with(Timer::from_seconds(0.1, true));
 }
 
 fn animate_sprite_system(
