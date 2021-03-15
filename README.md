@@ -12,6 +12,23 @@ game engine.
 It is intended to make it easy and quick to make top-down or side-view
 games in Bevy.
 
+Try it!
+-------
+
+Run the demo with:
+
+    cargo run --example demo
+
+The tiles used in this demo come from a “No Rights Reserved”
+[CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
+art pack from [Kenney](https://kenney.nl/assets/medieval-rts).
+
+Bevy version?
+-------------
+
+I'm going to try to track the latest stable Bevy release. While Bevy is
+in rapid development, I'm not going to attempt anything other than
+updating to the new version whenever one appears.
 
 First priorities
 ----------------
@@ -25,6 +42,7 @@ First priorities
 Medium-term
 -----------
 
+* Cope with resizeable windows
 * Performance: don't render offscreen (but do on zoom or scroll!)
 * Layers
   - to be decided: separate entities or multiple textures in same cell?
