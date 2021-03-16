@@ -22,6 +22,14 @@ use bevy::input::system::exit_on_esc_system;
 // These are used for creating the map texture
 use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 
+/// We want to store our list of handles to tile images as a global
+/// Bevy resource. In Bevy, these global resources are located by type,
+/// so we need a custom type to do this.
+#[derive(Default)]
+struct MapEngineTileHandles {
+    handles: Vec<HandleUntyped>,
+}
+
 /// This function is called as a Bevy startup function — see the App
 /// builder in main, below. The name `setup` is not magical, but it's
 /// a straightforward-enough convention.
@@ -44,37 +52,24 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 fn setup(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut tilehandles: ResMut<MapEngineTileHandles>,
 ) {
     // This sets up the default 2d camera, which has an orthgraphic (staight ahead,
     // everything square-on) view.
     commands.spawn(Camera2dBundle::default());
 
-    // The asset server defaults to looking in the `assets` directory. You
-    // can do some fancy things like automatically loading changes from disk,
-    // but we're not going for any of that here (yet, at least).
-    let demo_tilesheet_handle = asset_server.load("medieval_tilesheet.png");
+    // The asset server defaults to looking in the `assets` directory.
+    // This function loads everything in the `terrain` subfolder as our
+    // tile images and stores the list of handles in the global resource.
+    // FIXME remove the unwrap!
+    tilehandles.handles = asset_server.load_folder("terrain").unwrap();
 
-    // We're loading our texture_atlas with an image which happens to have
-    // 128×128 pixel tiles with 64 pixels of padding in between. And Bevy
-    // has a function to load into a texture map from an image formatted that
-    // that way, which is super-handy! ("18" and "7" are columns and rows.)
-    let texture_atlas = TextureAtlas::from_grid_with_padding(
-        demo_tilesheet_handle,
-        Vec2::new(128.0, 128.0),
-        18,
-        7,
-        Vec2::new(64.0, 64.0),
-    );
-
-    // This does two things: adds the TextureAtlas we just created
-    // to the global Resource, and gets a Handle to that TextureAtlas
-    // which we can use later when creating Entities that represent
-    // map cells.
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-
+    // Here we create a shiny new empty texture which will serve as
+    // the "canvas" for our world map.
+    //
+    // Temporarily, this is bright red so we can see that it's working.
     let map_texture = textures.add(Texture::new_fill(
         Extent3d::new(1280, 1280, 1),
         TextureDimension::D2,
@@ -88,31 +83,14 @@ fn setup(
         ..Default::default()
     });
 
-    // And now we create a grid of Entities with SpriteSheetBundle.
-    //
-    // Bundles are collections of Components, and this bundle has stuff
-    // that tells the built-in RenderPlugin (part of DefaultPlugins) to
-    // actually draw this thing, and how. Note that this is just Rust —
-    // the bundle is a struct, and the default() part fills in the
-    // standard stuff for a sprite sheet, plus of course the
-    // texture_atlas_handle we are giving it now.
-    //
-    // We could also tack .with() calls to the end of the spawn command
-    // to add additional Components beyond those in the bundle.
-    commands.spawn(SpriteSheetBundle {
-        // Each sprite holds a pointer to the texture atlas
-        texture_atlas: texture_atlas_handle,
-        // and also a color (which will shade the render!)
-        // and an index (by row then column) of the specific tile
-        sprite: TextureAtlasSprite {
-            color: Color::WHITE,
-            index: 0,
-        },
-        ..Default::default()
-    });
+    // And now for something horrible. Bevy does not yet have a way to
+    // actually copy/draw from texture to texture. So we are going to do
+    // it the hard way.
+
+    // And now we create a grid of Entities...
 }
 
-fn testing(mut query: Query<&mut Texture>) {}
+//fn testing(mut query: Query<&mut Texture>) {}
 
 fn main() {
     App::build()
@@ -128,6 +106,9 @@ fn main() {
             mode: WindowMode::Windowed,
             ..Default::default()
         })
+        .init_resource::<MapEngineTileHandles>()
+        // This sets up all the basic Bevy engine stuff. Basically,
+        // nothing in Bevy will work without 90% of this.
         .add_plugins_with(DefaultPlugins, |group| {
             // We're not using audio, and gltf is for 3d scenes.
             group.disable::<AudioPlugin>().disable::<GltfPlugin>()
@@ -140,7 +121,8 @@ fn main() {
         // Now, we are finally on to our own code — that is, stuff here in this demo.
         // This is a added as a "startup system", which runs only once at the beginning.
         .add_startup_system(setup.system())
+        // for testing, of course
+        //.add_system(testing.system())
         // And this, of course, fires off the actual game loop.
-        .add_system(testing.system())
         .run()
 }
