@@ -63,7 +63,8 @@ fn setup(
     // The asset server defaults to looking in the `assets` directory.
     // This function loads everything in the `terrain` subfolder as our
     // tile images and stores the list of handles in the global resource.
-    // FIXME remove the unwrap!
+    // FIXME remove the unwrap and handle errors properly!
+    // FIXME check if assets are actually loaded before moving on
     tilehandles.handles = asset_server.load_folder("terrain").unwrap();
 
     // Here we create a shiny new empty texture which will serve as
@@ -80,6 +81,12 @@ fn setup(
     // For testing, we create a sprite which shows the whole big texture
     commands.spawn(SpriteBundle {
         material: materials.add(map_texture.into()),
+        ..Default::default()
+    });
+
+    // And another test sprite
+    commands.spawn(SpriteBundle {
+        material: materials.add(asset_server.get_handle("terrain/grass1.png").into()),
         ..Default::default()
     });
 
