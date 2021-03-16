@@ -79,11 +79,23 @@ fn setup(
     //
     // We could also tack .with() calls to the end of the spawn command
     // to add additional Components beyond those in the bundle.
-
     commands.spawn(SpriteSheetBundle {
+        // Each sprite holds a pointer to the texture atlas
         texture_atlas: texture_atlas_handle,
+        // and also a color (which will shade the render!)
+        // and an index (by row then column) of the specific tile
+        sprite: TextureAtlasSprite {
+            color: Color::WHITE,
+            index: 0,
+        },
         ..Default::default()
     });
+}
+
+fn testing(mut query: Query<&mut TextureAtlasSprite>) {
+    for sprite in query.iter_mut() {
+        println!("{:?}", sprite)
+    }
 }
 
 fn main() {
@@ -113,5 +125,6 @@ fn main() {
         // This is a added as a "startup system", which runs only once at the beginning.
         .add_startup_system(setup.system())
         // And this, of course, fires off the actual game loop.
+        .add_system(testing.system())
         .run()
 }
