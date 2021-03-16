@@ -19,6 +19,9 @@ use bevy::{audio::AudioPlugin, gltf::GltfPlugin};
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
 
+// These are used for creating the map texture
+use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
+
 /// This function is called as a Bevy startup function — see the App
 /// builder in main, below. The name `setup` is not magical, but it's
 /// a straightforward-enough convention.
@@ -26,10 +29,12 @@ use bevy::input::system::exit_on_esc_system;
 /// Part of Bevy's magic is that the app is generated such that system
 /// like this one get "fed" various information automatically based on
 /// the parameters you give it. Here, we are getting Commands, which
-/// be used to spawn or remove Elements from the World, plus two global
-/// Res(ources): an AssetServer and a collection of Assets of type
-/// TextureAtlas. The former is used to load a texture from our on-disk
-/// sample tilemap image, and the later then store a handles to the
+/// be used to spawn or remove Elements from the World, plus several
+/// global Res(ources): an AssetServer and collections of Assets of
+/// type Texture and TextureAtlas.
+///
+/// The AssetServer is used to load a texture from our on-disk
+/// sample tilemap image, and the Asset collections store handles to the
 /// loaded texture and a list of rectangular areas within that texture
 /// which can be used for individual Sprites. Other systems might use
 /// Query to get access to selected Entities stored in the World.
@@ -40,6 +45,8 @@ fn setup(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut textures: ResMut<Assets<Texture>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // This sets up the default 2d camera, which has an orthgraphic (staight ahead,
     // everything square-on) view.
@@ -68,6 +75,19 @@ fn setup(
     // map cells.
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
+    let map_texture = textures.add(Texture::new_fill(
+        Extent3d::new(1280, 1280, 1),
+        TextureDimension::D2,
+        &[255, 0, 0, 255],
+        TextureFormat::Rgba8UnormSrgb,
+    ));
+
+    // For testing, we create a sprite which shows the whole big texture
+    commands.spawn(SpriteBundle {
+        material: materials.add(map_texture.into()),
+        ..Default::default()
+    });
+
     // And now we create a grid of Entities with SpriteSheetBundle.
     //
     // Bundles are collections of Components, and this bundle has stuff
@@ -92,11 +112,7 @@ fn setup(
     });
 }
 
-fn testing(mut query: Query<&mut TextureAtlasSprite>) {
-    for sprite in query.iter_mut() {
-        println!("{:?}", sprite)
-    }
-}
+fn testing(mut query: Query<&mut Texture>) {}
 
 fn main() {
     App::build()
