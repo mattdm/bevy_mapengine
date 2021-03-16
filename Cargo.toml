@@ -1,9 +1,16 @@
 [package]
 name = "bevy_mapengine"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Matthew Miller <mattdm@mattdm.org>"]
+publish = false
+repository = "https://github.com/mattdm/bevy_mapengine"
 edition = "2018"
+keywords = ["game", "engine", "bevy", "tiles", "tilemap", "2d"]
+categories = ["game-engines", "graphics", "gui"]
+readme = "README.md"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bevy = "0.4"
