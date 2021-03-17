@@ -37,13 +37,14 @@ enum MapEngineState {
 /// on the map; x and y should not change. Note also that I haven't
 /// decided on how to do layering, so duplicating (col,row) will
 /// lead to unpredictable results.
+#[derive(Debug)]
 struct MapCell {
     /// Column (x) position of this tile on the map. 0 is the center of the world.
     col: usize,
     /// Row (y) position of this tile on the map. 0 is the center of the world.
     row: usize,
     /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
-    texture_handle: HandleUntyped,
+    texture_handle: Handle<Texture>,
 }
 
 /// Bevy groups systems into stages. Our mapengine
@@ -58,6 +59,26 @@ const MAPENGINE_STAGE: &str = "mapengine_stage";
 #[derive(Default)]
 struct MapEngineTileHandles {
     handles: Vec<HandleUntyped>,
+}
+
+/// This is for the global resource that holds our map information.
+struct MapEngineMap {
+    /// The actual texture to be drawn on
+    texture: Texture,
+    /// Each cell must be the same; keeping it here saves us reading it later.
+    cell_width: usize,
+    /// Each cell must be the same; keeping it here saves us reading it later.
+    cell_height: usize,
+}
+
+impl Default for MapEngineMap {
+    fn default() -> Self {
+        MapEngineMap {
+            texture: Texture::default(),
+            cell_width: 64,
+            cell_height: 64,
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -127,6 +148,7 @@ fn wait_for_tile_load_system(
     {
         state.set_next(MapEngineState::Running).unwrap();
     }
+    // FIXME verify that all of the tiles are the same size and write the dimension to the MapEngineMap resource.
 }
 
 /// A very simple system which just makes it so we can see the world.
@@ -143,31 +165,47 @@ fn setup_camera_system(commands: &mut Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
+/// This is a one-time system that spawns some MapCell components.
+fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
+    commands.spawn((MapCell {
+        col: 0,
+        row: 0,
+        texture_handle: asset_server.get_handle("terrain/pine6.png"),
+    },));
+}
+
 /// This is a playground for creating the map texture
 fn maptexture_system(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut mapengine_map: ResMut<MapEngineMap>,
+    mapcells: Query<(&MapCell)>,
 ) {
     // Here we create a shiny new empty texture which will serve as
     // the "canvas" for our world map.
     //
     // Temporarily, this is bright red so we can see that it's working.
-    let mut map_texture = Texture::new_fill(
+    mapengine_map.texture = Texture::new_fill(
         Extent3d::new(720, 720, 1),
         TextureDimension::D2,
         &[255, 0, 0, 255],
         TextureFormat::Rgba8UnormSrgb,
     );
 
-    let other_texture_handle: Handle<Texture> = asset_server.get_handle("terrain/grass1.png");
-    let other_texture = textures.get(other_texture_handle).unwrap();
+    for mapcell in mapcells.iter() {
+        println!("{:#?}", mapcell);
 
-    copy_texture(&mut map_texture, &other_texture, 0, 0);
+        // FIXME handle missing textures instead of unwrap!
+        let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
+        // FIXME location, location, location!
+        copy_texture(&mut mapengine_map.texture, &cell_texture, 0, 0);
+    }
 
-    let map_texture_handle = textures.add(map_texture);
-    // For testing, we create a sprite which shows the whole big texture
+    let map_texture_handle = textures.add(mapengine_map.texture.clone());
+
+    // This "sprite" shows the whole map.
     commands.spawn(SpriteBundle {
         material: materials.add(map_texture_handle.into()),
         ..Default::default()
@@ -206,6 +244,8 @@ fn main() {
         // This won't be part of our plugin -- it'll be expected that the game using our
         // plugin will do this.
         .add_startup_system(setup_camera_system.system())
+        // This inserts MapCell entities from which the map will be built.
+        .add_startup_system(setup_demo_map_system.system())
         // A stash of handles to our image tiles, so we can use them everywhere.
         .init_resource::<MapEngineTileHandles>()
         // This adds a "Stage" (basically, a group of systems) set up to handle our
