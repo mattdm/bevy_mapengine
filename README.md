@@ -30,6 +30,22 @@ I'm going to try to track the latest stable Bevy release. While Bevy is
 in rapid development, I'm not going to attempt anything other than
 updating to the new version whenever one appears.
 
+Important Performance Notes
+---------------------------
+
+Bevy doesn't currently implement a way to draw textures on other
+textures. Hopefully this will be implemented soon. (See
+[this issue](https://github.com/bevyengine/bevy/issues/1207#issuecomment-800602680)
+for details.) In the meantime, this plugin copies image pixel data using
+the CPU in a pretty simple way. This is not good for anything but
+infrequent updates. Additionally, there is no render batching, so
+updating a bunch of map cells at once will be quite slow.
+
+However, this will do while working on basic functionality, and may even
+be useful for simple games. Luckily, all of this is behind the scenes.
+When Bevy gets support for doing this in a fast way, switching to that
+should be seamless the point of view of a user of the plugin.
+
 First priorities
 ----------------
 
