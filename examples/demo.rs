@@ -87,41 +87,26 @@ fn setup(
     // the "canvas" for our world map.
     //
     // Temporarily, this is bright red so we can see that it's working.
-    let map_texture = textures.add(Texture::new_fill(
+    let mut map_texture = Texture::new_fill(
         Extent3d::new(512, 512, 1),
         TextureDimension::D2,
         &[255, 0, 0, 255],
         TextureFormat::Rgba8UnormSrgb,
-    ));
+    );
 
-    let other_texture = textures.add(Texture::new_fill(
+    let other_texture = Texture::new_fill(
         Extent3d::new(128, 128, 1),
         TextureDimension::D2,
         &[0, 255, 255, 255],
         TextureFormat::Rgba8UnormSrgb,
-    ));
+    );
 
-    let target_texture_data = &textures.get_mut(&map_texture).unwrap().data;
-    let source_texture_data = textures.get(other_texture).unwrap().data.clone();
-    let rect_y = 0;
-    let rect_x = 0;
-    let rect_width = 128 as usize;
-    let rect_height = 128 as usize;
-    let atlas_width = 512; // target_texture.size.width as usize;
-    let format_size = 4;
+    copy_texture(&mut map_texture, &other_texture, 0, 0);
 
-    for (texture_y, bound_y) in (rect_y..rect_y + rect_height).enumerate() {
-        let begin = (bound_y * atlas_width + rect_x) * format_size;
-        let end = begin + rect_width * format_size;
-        let texture_begin = texture_y * rect_width * format_size;
-        let texture_end = texture_begin + rect_width * format_size;
-        target_texture_data[begin..end]
-            .copy_from_slice(&source_texture_data[texture_begin..texture_end]);
-    }
-
+    let map_texture_handle = textures.add(map_texture);
     // For testing, we create a sprite which shows the whole big texture
     commands.spawn(SpriteBundle {
-        material: materials.add(map_texture.into()),
+        material: materials.add(map_texture_handle.into()),
         ..Default::default()
     });
 
