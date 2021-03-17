@@ -8,11 +8,6 @@ use bevy::prelude::*;
 // In order to start full-screen (or not). We will eventually want this.
 use bevy::window::WindowMode;
 
-// So, ironically, we have to bring into scope all of the plugins we want
-// to _disable_ from the defaults. Some of these we will use eventually, but
-// I'm leaving them out for now.
-use bevy::{audio::AudioPlugin, gltf::GltfPlugin};
-
 // Built-in Bevy plugins to print FPS to console.
 //use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
@@ -186,11 +181,10 @@ fn main() {
             ..Default::default()
         })
         // This sets up all the basic Bevy engine stuff. Basically,
-        // nothing in Bevy will work without 90% of this.
-        .add_plugins_with(DefaultPlugins, |group| {
-            // We're not using audio, and gltf is for 3d scenes.
-            group.disable::<AudioPlugin>().disable::<GltfPlugin>()
-        })
+        // nothing in Bevy will work without 90% of this, so most people
+        // just include it all. Note that for this project, audio and
+        // gltf (a 3d graphic format) are disabled in Cargo.toml.
+        .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
         //.add_plugin(FrameTimeDiagnosticsPlugin::default())
         //.add_plugin(PrintDiagnosticsPlugin::default())
