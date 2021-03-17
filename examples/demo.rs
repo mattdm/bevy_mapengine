@@ -125,8 +125,14 @@ fn setup_camera_system(commands: &mut Commands) {
     // everything square-on) view.
     commands.spawn(Camera2dBundle::default());
 }
-/*
 
+/// This is a playground for creating the map texture
+fn maptexture_system(
+    commands: &mut Commands,
+    asset_server: Res<AssetServer>,
+    mut textures: ResMut<Assets<Texture>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     // Here we create a shiny new empty texture which will serve as
     // the "canvas" for our world map.
     //
@@ -138,7 +144,6 @@ fn setup_camera_system(commands: &mut Commands) {
         TextureFormat::Rgba8UnormSrgb,
     );
 
-    tilehandles.handles = asset_server.load_folder("terrain").unwrap();
     let other_texture_handle: Handle<Texture> = asset_server.get_handle("terrain/grass1.png");
     let other_texture = textures.get(other_texture_handle).unwrap();
 
@@ -150,15 +155,7 @@ fn setup_camera_system(commands: &mut Commands) {
         material: materials.add(map_texture_handle.into()),
         ..Default::default()
     });
-
-    // And another test sprite
-    commands.spawn(SpriteBundle {
-        material: materials.add(asset_server.get_handle("terrain/grass1.png").into()),
-        ..Default::default()
-    });
 }
-*/
-//fn testing(mut query: Query<&mut Texture>) {}
 
 fn main() {
     App::build()
@@ -217,6 +214,14 @@ fn main() {
             MAPENGINE_STAGE,
             MapEngineState::Loading,
             wait_for_tile_load_system.system(),
+        )
+        // This system will run once when we get to the Running state.
+        // It's a temporary thing, because eventually we want a system which
+        // runs every frame looking for changed MapCell entities.
+        .on_state_enter(
+            MAPENGINE_STAGE,
+            MapEngineState::Running,
+            maptexture_system.system(),
         )
         // And finally, this, which fires off the actual game loop.
         .run()
