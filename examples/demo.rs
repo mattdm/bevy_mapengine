@@ -30,6 +30,22 @@ struct MapEngineTileHandles {
     handles: Vec<HandleUntyped>,
 }
 
+/// Ripped from bevy_sprite/src/texture_atlas_builder.rs
+fn copy_texture(target_texture: &mut Texture, texture: &Texture, rect_x: usize, rect_y: usize) {
+    let rect_width = 128 as usize;
+    let rect_height = 128 as usize;
+    let atlas_width = target_texture.size.width as usize;
+    let format_size = target_texture.format.pixel_size();
+
+    for (texture_y, bound_y) in (rect_y..rect_y + rect_height).enumerate() {
+        let begin = (bound_y * atlas_width + rect_x) * format_size;
+        let end = begin + rect_width * format_size;
+        let texture_begin = texture_y * rect_width * format_size;
+        let texture_end = texture_begin + rect_width * format_size;
+        target_texture.data[begin..end].copy_from_slice(&texture.data[texture_begin..texture_end]);
+    }
+}
+
 /// This function is called as a Bevy startup function — see the App
 /// builder in main, below. The name `setup` is not magical, but it's
 /// a straightforward-enough convention.
@@ -72,11 +88,36 @@ fn setup(
     //
     // Temporarily, this is bright red so we can see that it's working.
     let map_texture = textures.add(Texture::new_fill(
-        Extent3d::new(1280, 1280, 1),
+        Extent3d::new(512, 512, 1),
         TextureDimension::D2,
         &[255, 0, 0, 255],
         TextureFormat::Rgba8UnormSrgb,
     ));
+
+    let other_texture = textures.add(Texture::new_fill(
+        Extent3d::new(128, 128, 1),
+        TextureDimension::D2,
+        &[0, 255, 255, 255],
+        TextureFormat::Rgba8UnormSrgb,
+    ));
+
+    let target_texture_data = &textures.get_mut(&map_texture).unwrap().data;
+    let source_texture_data = textures.get(other_texture).unwrap().data.clone();
+    let rect_y = 0;
+    let rect_x = 0;
+    let rect_width = 128 as usize;
+    let rect_height = 128 as usize;
+    let atlas_width = 512; // target_texture.size.width as usize;
+    let format_size = 4;
+
+    for (texture_y, bound_y) in (rect_y..rect_y + rect_height).enumerate() {
+        let begin = (bound_y * atlas_width + rect_x) * format_size;
+        let end = begin + rect_width * format_size;
+        let texture_begin = texture_y * rect_width * format_size;
+        let texture_end = texture_begin + rect_width * format_size;
+        target_texture_data[begin..end]
+            .copy_from_slice(&source_texture_data[texture_begin..texture_end]);
+    }
 
     // For testing, we create a sprite which shows the whole big texture
     commands.spawn(SpriteBundle {
@@ -89,12 +130,6 @@ fn setup(
         material: materials.add(asset_server.get_handle("terrain/grass1.png").into()),
         ..Default::default()
     });
-
-    // And now for something horrible. Bevy does not yet have a way to
-    // actually copy/draw from texture to texture. So we are going to do
-    // it the hard way.
-
-    // And now we create a grid of Entities...
 }
 
 //fn testing(mut query: Query<&mut Texture>) {}
