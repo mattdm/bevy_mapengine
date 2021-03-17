@@ -218,10 +218,12 @@ fn maptexture_system(
     // the "canvas" for our world map, big enough to hold the above.
     //
     // Temporarily, this is bright red so we can see that it's working.
+    let map_width = mapengine_map.cell_width;
+    let map_height = mapengine_map.cell_height;
     mapengine_map.texture = Texture::new_fill(
         Extent3d::new(
-            cols as u32 * mapengine_map.cell_width as u32,
-            rows as u32 * mapengine_map.cell_height as u32,
+            cols as u32 * map_width as u32,
+            rows as u32 * map_height as u32,
             1,
         ),
         TextureDimension::D2,
@@ -233,8 +235,12 @@ fn maptexture_system(
     for mapcell in mapcells.iter() {
         // FIXME handle missing textures instead of unwrap!
         let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
-        // FIXME location, location, location!
-        copy_texture(&mut mapengine_map.texture, &cell_texture, 0, 0);
+        copy_texture(
+            &mut mapengine_map.texture,
+            &cell_texture,
+            mapcell.col as usize * map_width,
+            mapcell.row as usize * map_height,
+        );
     }
 
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
