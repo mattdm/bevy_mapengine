@@ -34,14 +34,28 @@ enum MapEngineState {
     Running,
 }
 
+/// This is a Bevy Component that defines an Entity as representing
+/// a space on our map, and holds the location and the tile image
+/// to use. Note that these are meant to represent fixed locations
+/// on the map; x and y should not change.
+struct MapCell {
+    /// Column (x) position of this tile on the map. 0 is the center of the world.
+    col: usize,
+    /// Row (y) position of this tile on the map. 0 is the center of the world.
+    row: usize,
+    /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
+    texture_handle: HandleUntyped,
+}
+
 /// Bevy groups systems into stages. Our mapengine
 /// runs in its own stage, and this is its name.
 /// See main() for how this is actually used.
 const MAPENGINE_STAGE: &str = "mapengine_stage";
 
-/// We want to store our list of handles to tile images as a global
-/// Bevy resource. In Bevy, these global resources are located by type,
-/// so we need a custom type to do this.
+/// Our list of handles to tile images is stored as a global
+/// Bevy resource so we can use them in various systems. In Bevy,
+/// these global resources are located by type, so we need a custom
+/// type to do this.
 #[derive(Default)]
 struct MapEngineTileHandles {
     handles: Vec<HandleUntyped>,
