@@ -31,6 +31,7 @@ use std::cmp;
 #[derive(Clone)]
 enum MapEngineState {
     Loading,
+    Verifying,
     Running,
 }
 
@@ -78,8 +79,8 @@ impl Default for MapEngineMap {
     fn default() -> Self {
         MapEngineMap {
             texture: Texture::default(),
-            cell_width: 64,
-            cell_height: 64,
+            cell_width: 0,
+            cell_height: 0,
         }
     }
 }
@@ -126,8 +127,13 @@ fn load_tiles_system(
     // The asset server defaults to looking in the `assets` directory.
     // This call loads everything in the `terrain` subfolder as our
     // tile images and stores the list of handles in the global resource.
-    // FIXME remove the unwrap and handle errors properly!
-    tilehandles.handles = asset_server.load_folder("terrain").unwrap();
+    match asset_server.load_folder("terrain") {
+        Ok(handles) => tilehandles.handles = handles,
+        Err(err) => {
+            eprintln!("Error: Problem loading terrain textures ({:?})", err);
+            std::process::exit(1);
+        }
+    }
 }
 
 /// This system is configured to run as part of the game loop while in
@@ -136,22 +142,90 @@ fn load_tiles_system(
 ///
 /// Here, you can see that in addition to the resources the load system
 /// uses we also get the State resource. And since we don't modify the
-/// tilehandles here, it's not mutable.
+/// tilehandles here, that resource is not mutable.
 ///
-/// This function is adapted pretty directly from the `texture_atlas.rs`
-/// example in Bevy 0.4.0.
 fn wait_for_tile_load_system(
     mut state: ResMut<State<MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
     asset_server: Res<AssetServer>,
 ) {
-    // FIXME Expand into a match and show the different LoadStates
-    if let LoadState::Loaded =
-        asset_server.get_group_load_state(tilehandles.handles.iter().map(|handle| handle.id))
-    {
-        state.set_next(MapEngineState::Running).unwrap();
+    // Note that this is pretty much always going to be "NotLoaded" until it becomes "Loaded".
+    // The "Loading" state is unlikely because get_group_load_state returns not loaded if _any_ are.
+    match asset_server.get_group_load_state(tilehandles.handles.iter().map(|handle| handle.id)) {
+        LoadState::NotLoaded => println!("Loading terrain textures..."),
+        LoadState::Loading => println!("Loading terrain textures..."),
+        LoadState::Loaded => {
+            println!("Terrain textures loaded!");
+            // Finally advance the State
+            state.set_next(MapEngineState::Verifying).unwrap();
+        }
+        LoadState::Failed => {
+            eprintln!("Failed to load terrain textures!");
+            std::process::exit(1)
+        }
     }
-    // FIXME verify that all of the tiles are the same size and write the dimension to the MapEngineMap resource.
+}
+
+/// Check to make sure all of the loaded tiles are valid and then advance
+/// to the next game State (Running).
+fn verify_tiles_system(
+    mut state: ResMut<State<MapEngineState>>,
+    tilehandles: ResMut<MapEngineTileHandles>,
+    textures: Res<Assets<Texture>>,
+    mut mapengine_map: ResMut<MapEngineMap>,
+) {
+    // This crazy code:
+    //
+    // 1. Gets the widths, heights, and depths of all textures
+    // 2. Sets mapengine_map height and width
+    // 3. Errors if any tiles are differently-sized
+    // 4. Errors if any depth is anything but 1
+    // 5. And if all that succeeds, moves on to Running
+    //
+    // We could add other verification here as well, of course.
+    let widths = tilehandles
+        .handles
+        .iter()
+        .map(|handle| textures.get(handle).unwrap().size.width)
+        .collect::<Vec<u32>>();
+    let heights = tilehandles
+        .handles
+        .iter()
+        .map(|handle| textures.get(handle).unwrap().size.height)
+        .collect::<Vec<u32>>();
+    let depths = tilehandles
+        .handles
+        .iter()
+        .map(|handle| textures.get(handle).unwrap().size.depth)
+        .collect::<Vec<u32>>();
+
+    mapengine_map.cell_width = widths[0] as usize;
+    mapengine_map.cell_height = widths[0] as usize;
+
+    if widths.iter().any(|&w| w != mapengine_map.cell_width as u32) {
+        eprintln!("Error! All tile textures must be the same width (at least one isn't).");
+        std::process::exit(1)
+    }
+    if heights
+        .iter()
+        .any(|&h| h != mapengine_map.cell_height as u32)
+    {
+        eprintln!("Error! All tile textures must be the same height (at least one isn't).");
+        std::process::exit(1)
+    }
+    if depths.iter().any(|&d| d != 1) {
+        eprintln!("Error! At least of the tile textures isn't two-dimensional!");
+        std::process::exit(1)
+    }
+
+    println!(
+        "{:?} terrain textures of size {:?}×{:?} found.",
+        widths.len(),
+        mapengine_map.cell_width,
+        mapengine_map.cell_height
+    );
+
+    state.set_next(MapEngineState::Running).unwrap();
 }
 
 /// A very simple system which just makes it so we can see the world.
@@ -233,14 +307,21 @@ fn maptexture_system(
 
     // And now we iterate through again and do the actual copying
     for mapcell in mapcells.iter() {
-        // FIXME handle missing textures instead of unwrap!
-        let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
-        copy_texture(
-            &mut mapengine_map.texture,
-            &cell_texture,
-            mapcell.col as usize * map_width,
-            mapcell.row as usize * map_height,
-        );
+        //let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
+        match textures.get(&mapcell.texture_handle) {
+            Some(cell_texture) => {
+                copy_texture(
+                    &mut mapengine_map.texture,
+                    &cell_texture,
+                    mapcell.col as usize * map_width,
+                    mapcell.row as usize * map_height,
+                );
+            }
+            None => {
+                eprintln!("For some reason, a texture is missing.");
+                std::process::exit(2);
+            }
+        };
     }
 
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
@@ -310,11 +391,20 @@ fn main() {
             load_tiles_system.system(),
         )
         // And this stage runs every frame while still in Loading state
-        // (and is responsible for changing the state to Running when ready)
+        // (and is responsible for changing the state to Checking when ready)
         .on_state_update(
             MAPENGINE_STAGE,
             MapEngineState::Loading,
             wait_for_tile_load_system.system(),
+        )
+        // This stage makes sure that our tiles are valid and stores information
+        // about them in the global MapEngineMap resource, and then advances
+        // the state to Running. It exits on failure; we could get even more
+        // fancy and instead have an Error state which presents error messages in-game.
+        .on_state_enter(
+            MAPENGINE_STAGE,
+            MapEngineState::Verifying,
+            verify_tiles_system.system(),
         )
         // This system will run once when we get to the Running state.
         // It's a temporary thing, because eventually we want a system which
