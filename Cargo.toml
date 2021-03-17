@@ -6,7 +6,7 @@ publish = false
 repository = "https://github.com/mattdm/bevy_mapengine"
 edition = "2018"
 keywords = ["game", "engine", "bevy", "tiles", "tilemap", "2d"]
-categories = ["game-engines", "graphics", "gui"]
+categories = ["game-development", "graphics"]
 readme = "README.md"
 license = "MIT"
 
