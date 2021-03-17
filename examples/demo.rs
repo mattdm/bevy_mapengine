@@ -69,13 +69,13 @@ struct MapEngineTileHandles {
 /// https://github.com/bevyengine/bevy/issues/1207#issuecomment-800602680
 /// for a real solution.
 fn copy_texture(target_texture: &mut Texture, texture: &Texture, rect_x: usize, rect_y: usize) {
-    let rect_width = 128 as usize;
-    let rect_height = 128 as usize;
-    let atlas_width = target_texture.size.width as usize;
+    let rect_width = texture.size.width as usize;
+    let rect_height = texture.size.height as usize;
+    let target_width = target_texture.size.width as usize;
     let format_size = target_texture.format.pixel_size();
 
     for (texture_y, bound_y) in (rect_y..rect_y + rect_height).enumerate() {
-        let begin = (bound_y * atlas_width + rect_x) * format_size;
+        let begin = (bound_y * target_width + rect_x) * format_size;
         let end = begin + rect_width * format_size;
         let texture_begin = texture_y * rect_width * format_size;
         let texture_end = texture_begin + rect_width * format_size;
@@ -152,7 +152,7 @@ fn maptexture_system(
     //
     // Temporarily, this is bright red so we can see that it's working.
     let mut map_texture = Texture::new_fill(
-        Extent3d::new(512, 512, 1),
+        Extent3d::new(720, 720, 1),
         TextureDimension::D2,
         &[255, 0, 0, 255],
         TextureFormat::Rgba8UnormSrgb,
