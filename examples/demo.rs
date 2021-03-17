@@ -20,6 +20,9 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 // Used to tell if assets are loaded ... see check_tiles_loaded_system()
 use bevy::asset::LoadState;
 
+// Standard rust things...
+use std::cmp;
+
 /*----------------------------------------------------------------------------*/
 
 /// Bevy does "lazy" loading of assets. We switch from the
@@ -39,10 +42,10 @@ enum MapEngineState {
 /// lead to unpredictable results.
 #[derive(Debug)]
 struct MapCell {
-    /// Column (x) position of this tile on the map. 0 is the center of the world.
-    col: usize,
-    /// Row (y) position of this tile on the map. 0 is the center of the world.
-    row: usize,
+    /// Column (x) position of this tile on the map. 0 is on the left.
+    col: i32,
+    /// Row (y) position of this tile on the map. 0 is at thet op.
+    row: i32,
     /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
     texture_handle: Handle<Texture>,
 }
@@ -172,31 +175,62 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
         row: 0,
         texture_handle: asset_server.get_handle("terrain/pine6.png"),
     },));
+    commands.spawn((MapCell {
+        col: 1,
+        row: 0,
+        texture_handle: asset_server.get_handle("terrain/grass1.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 0,
+        row: 1,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 1,
+        row: 1,
+        texture_handle: asset_server.get_handle("terrain/tree1.png"),
+    },));
 }
 
 /// This is a playground for creating the map texture
 fn maptexture_system(
     commands: &mut Commands,
-    asset_server: Res<AssetServer>,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
-    mapcells: Query<(&MapCell)>,
+    mapcells: Query<&MapCell>,
 ) {
+    // MapCells are entities in the World. Iterate through them
+    // here and draw them onto the map texture.
+
+    let mut cols = 0;
+    let mut rows = 0;
+    // This first pass gathers information needed to size the map texture.
+    for mapcell in mapcells.iter() {
+        // Find the furthest-from 0,0 rows and columns.
+        // The +1 is because we are zero-indexed, so if everything is in col 0
+        // we still need a cell_width-wide map.
+        cols = cmp::max(cols, mapcell.col + 1);
+        rows = cmp::max(rows, mapcell.row + 1);
+    }
+
     // Here we create a shiny new empty texture which will serve as
-    // the "canvas" for our world map.
+    // the "canvas" for our world map, big enough to hold the above.
     //
     // Temporarily, this is bright red so we can see that it's working.
     mapengine_map.texture = Texture::new_fill(
-        Extent3d::new(720, 720, 1),
+        Extent3d::new(
+            cols as u32 * mapengine_map.cell_width as u32,
+            rows as u32 * mapengine_map.cell_height as u32,
+            1,
+        ),
         TextureDimension::D2,
         &[255, 0, 0, 255],
         TextureFormat::Rgba8UnormSrgb,
     );
 
+    // And now we iterate through again and do the actual copying
     for mapcell in mapcells.iter() {
-        println!("{:#?}", mapcell);
-
         // FIXME handle missing textures instead of unwrap!
         let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
         // FIXME location, location, location!
@@ -250,8 +284,9 @@ fn main() {
         .init_resource::<MapEngineTileHandles>()
         // This adds a "Stage" (basically, a group of systems) set up to handle our
         // various "States". Our stage, used in the MapEngine, will run right after
-        // the default UPDATE stage. See https://bevy-cheatbook.github.io/basics/stages.html
-        // for more on stages.
+        // the default UPDATE stage. This is important because otherwise we will miss
+        // changes to MapCell entities done in the plugin user's code.
+        // See https://bevy-cheatbook.github.io/basics/stages.html for more on stages.
         .add_stage_after(
             stage::UPDATE,
             MAPENGINE_STAGE,
