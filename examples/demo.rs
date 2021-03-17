@@ -41,15 +41,23 @@ enum MapEngineState {
 /// on the map; x and y should not change. Note also that I haven't
 /// decided on how to do layering, so duplicating (col,row) will
 /// lead to unpredictable results.
+/// TODO consider making col and row read-only using the readonly crate
+/// TODO make texture_handle a Vec, and draw in order?
+/// The other layering approach (adding depth, allowing multiple col,row)
+/// has the disadvantage that we need to find all of the entities to draw.
 #[derive(Debug)]
 struct MapCell {
     /// Column (x) position of this tile on the map. 0 is on the left.
     col: i32,
-    /// Row (y) position of this tile on the map. 0 is at thet op.
+    /// Row (y) position of this tile on the map. 0 is at the top.
     row: i32,
     /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
     texture_handle: Handle<Texture>,
 }
+
+// TODO add a component which signals that a mapcell needs to be refreshed.
+// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
+struct MapCellRefreshNeeded;
 
 /// Bevy groups systems into stages. Our mapengine
 /// runs in its own stage, and this is its name.
@@ -76,6 +84,7 @@ struct MapEngineMap {
 }
 
 impl Default for MapEngineMap {
+    /// default to an empty texture
     fn default() -> Self {
         MapEngineMap {
             texture: Texture::default(),
@@ -143,7 +152,6 @@ fn load_tiles_system(
 /// Here, you can see that in addition to the resources the load system
 /// uses we also get the State resource. And since we don't modify the
 /// tilehandles here, that resource is not mutable.
-///
 fn wait_for_tile_load_system(
     mut state: ResMut<State<MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
@@ -166,15 +174,19 @@ fn wait_for_tile_load_system(
     }
 }
 
-/// Check to make sure all of the loaded tiles are valid and then advance
-/// to the next game State (Running).
+/// A system which shecs to make sure all of the loaded tiles are
+/// valid and then advances to the next game State (Running).
+/// A more advanced version of this could go to an Error state
+/// instead of existing on failure. Combined with dynamic asset
+/// loading, that could make it possible to actually fix the
+/// problem and resume.
 fn verify_tiles_system(
     mut state: ResMut<State<MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
     textures: Res<Assets<Texture>>,
     mut mapengine_map: ResMut<MapEngineMap>,
 ) {
-    // This crazy code:
+    // This crazy code does this:
     //
     // 1. Gets the widths, heights, and depths of all textures
     // 2. Sets mapengine_map height and width
@@ -244,7 +256,10 @@ fn setup_camera_system(commands: &mut Commands) {
 
 /// This is a one-time system that spawns some MapCell components.
 /// For a future phase of this demo we'll need something more sophisticated,
-/// but this works for now.
+/// but this works for now. It needs Commands to do the spawning, and the
+/// AssetServer resource to get the handles for textures by name.
+/// TODO Maybe parse a text file or multi-line string with character
+/// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
     commands.spawn((MapCell {
         col: 0,
@@ -332,6 +347,7 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
 }
 
 /// This is a playground for creating the map texture
+/// TODO Right now, this is a run-once startup system. Change it to run every frame _if_ entities have changed.
 fn maptexture_system(
     commands: &mut Commands,
     mut textures: ResMut<Assets<Texture>>,
@@ -357,6 +373,7 @@ fn maptexture_system(
     // the "canvas" for our world map, big enough to hold the above.
     //
     // Temporarily, this is bright red so we can see that it's working.
+    // TODO Make transparent.
     let map_width = mapengine_map.cell_width;
     let map_height = mapengine_map.cell_height;
     mapengine_map.texture = Texture::new_fill(
@@ -389,6 +406,9 @@ fn maptexture_system(
         };
     }
 
+    // This does two things: gets us the handle to put into the
+    // sprite, and also addes the texture as a global resource. Bevy
+    // needs both of these things to happen in order to actually render.
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
 
     // This "sprite" shows the whole map.
@@ -420,6 +440,7 @@ fn main() {
         // gltf (a 3d graphic format) are disabled in Cargo.toml.
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
+        // TODO add a command line option to turn these two on or off instead of messing with comments
         //.add_plugin(FrameTimeDiagnosticsPlugin::default())
         //.add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
@@ -474,11 +495,17 @@ fn main() {
         // This system will run once when we get to the Running state.
         // It's a temporary thing, because eventually we want a system which
         // runs every frame looking for changed MapCell entities.
+        // TODO make run on_state_update istead of on_state_enter
         .on_state_enter(
             MAPENGINE_STAGE,
             MapEngineState::Running,
             maptexture_system.system(),
         )
+        // TODO add a validator which runs periodically and checks for overlapping MapCells?
+        // TODO add a system which takes mouse events and translates them into new events that
+        // correspond to the mapcell location (enter, exit, click -- maybe motion?)
+        // TODO possibly also a global resource for current hovered or selected mapcell entity?
+        //
         // And finally, this, which fires off the actual game loop.
         .run()
 }
