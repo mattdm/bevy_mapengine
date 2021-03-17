@@ -1,6 +1,6 @@
 [package]
 name = "bevy_mapengine"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Matthew Miller <mattdm@mattdm.org>"]
 publish = false
 repository = "https://github.com/mattdm/bevy_mapengine"
