@@ -243,11 +243,13 @@ fn setup_camera_system(commands: &mut Commands) {
 }
 
 /// This is a one-time system that spawns some MapCell components.
+/// For a future phase of this demo we'll need something more sophisticated,
+/// but this works for now.
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
     commands.spawn((MapCell {
         col: 0,
         row: 0,
-        texture_handle: asset_server.get_handle("terrain/pine6.png"),
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
     },));
     commands.spawn((MapCell {
         col: 1,
@@ -255,14 +257,77 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
         texture_handle: asset_server.get_handle("terrain/grass1.png"),
     },));
     commands.spawn((MapCell {
+        col: 2,
+        row: 0,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 3,
+        row: 0,
+        texture_handle: asset_server.get_handle("terrain/tree2.png"),
+    },));
+
+    commands.spawn((MapCell {
         col: 0,
         row: 1,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+        texture_handle: asset_server.get_handle("terrain/pine3.png"),
     },));
     commands.spawn((MapCell {
         col: 1,
         row: 1,
+        texture_handle: asset_server.get_handle("terrain/pine2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 2,
+        row: 1,
+        texture_handle: asset_server.get_handle("terrain/grass1.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 3,
+        row: 1,
         texture_handle: asset_server.get_handle("terrain/tree1.png"),
+    },));
+
+    commands.spawn((MapCell {
+        col: 0,
+        row: 2,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 1,
+        row: 2,
+        texture_handle: asset_server.get_handle("terrain/grass1.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 2,
+        row: 2,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 3,
+        row: 2,
+        texture_handle: asset_server.get_handle("terrain/grass1.png"),
+    },));
+
+    commands.spawn((MapCell {
+        col: 0,
+        row: 3,
+        texture_handle: asset_server.get_handle("terrain/pine1.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 1,
+        row: 3,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 2,
+        row: 3,
+        texture_handle: asset_server.get_handle("terrain/grass1.png"),
+    },));
+    commands.spawn((MapCell {
+        col: 3,
+        row: 3,
+        texture_handle: asset_server.get_handle("terrain/grass2.png"),
     },));
 }
 
