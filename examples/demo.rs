@@ -20,6 +20,8 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 // Used to tell if assets are loaded ... see check_tiles_loaded_system()
 use bevy::asset::LoadState;
 
+/*----------------------------------------------------------------------------*/
+
 /// Bevy does "lazy" loading of assets. We switch from the
 /// Loading state to Running state when all of the tile images
 /// are actually loaded.
@@ -32,7 +34,9 @@ enum MapEngineState {
 /// This is a Bevy Component that defines an Entity as representing
 /// a space on our map, and holds the location and the tile image
 /// to use. Note that these are meant to represent fixed locations
-/// on the map; x and y should not change.
+/// on the map; x and y should not change. Note also that I haven't
+/// decided on how to do layering, so duplicating (col,row) will
+/// lead to unpredictable results.
 struct MapCell {
     /// Column (x) position of this tile on the map. 0 is the center of the world.
     col: usize,
@@ -56,6 +60,8 @@ struct MapEngineTileHandles {
     handles: Vec<HandleUntyped>,
 }
 
+/*----------------------------------------------------------------------------*/
+
 /// Ripped from bevy_sprite/src/texture_atlas_builder.rs.
 ///
 /// This doesn't really copy actual GPU textures. It copies bits
@@ -77,6 +83,8 @@ fn copy_texture(target_texture: &mut Texture, texture: &Texture, rect_x: usize, 
         target_texture.data[begin..end].copy_from_slice(&texture.data[texture_begin..texture_end]);
     }
 }
+
+/*----------------------------------------------------------------------------*/
 
 /// This function is a "system" — see the App builder in main(), below.
 /// It is configured there to run once at the beginning of the initial
@@ -166,6 +174,8 @@ fn maptexture_system(
     });
 }
 
+/*----------------------------------------------------------------------------*/
+
 fn main() {
     App::build()
         // The window is created by WindowPlugin. This is a global resource
@@ -210,13 +220,15 @@ fn main() {
         // This global resource tracks the state used in this stage.
         // We set it to Loading to start, of course.
         .add_resource(State::new(MapEngineState::Loading))
+        // And this global resource holds the texture for our map.
+        .add_resource(MapEngineMap::default())
         // This stage happens once when entering the Loading state (that is, right away)
         .on_state_enter(
             MAPENGINE_STAGE,
             MapEngineState::Loading,
             load_tiles_system.system(),
         )
-        // and this stage runs every frame while still in Loading state
+        // And this stage runs every frame while still in Loading state
         // (and is responsible for changing the state to Running when ready)
         .on_state_update(
             MAPENGINE_STAGE,

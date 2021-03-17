@@ -23,8 +23,12 @@ The tiles used in this demo come from a “No Rights Reserved”
 [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
 art pack from [Kenney](https://kenney.nl/assets/medieval-rts).
 
+The demo is well-commented and currently serves as usage documentation.
+
 Bevy version?
 -------------
+
+[![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
 
 I'm going to try to track the latest stable Bevy release. While Bevy is
 in rapid development, I'm not going to attempt anything other than
