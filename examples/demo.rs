@@ -21,6 +21,7 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 use bevy::asset::LoadState;
 
 // Standard rust things...
+use rand::Rng;
 use std::cmp;
 
 /*----------------------------------------------------------------------------*/
@@ -286,123 +287,36 @@ fn setup_camera_system(commands: &mut Commands) {
 /// TODO Maybe parse a text file or multi-line string with character
 /// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn((MapCell {
-            col: 0,
-            row: 0,
-            texture_handle: asset_server.get_handle("terrain/grass2.png"),
-        },))
-        .with(MapCellRefreshNeeded);
-    commands.spawn((MapCell {
-        col: 1,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/tree2.png"),
-    },));
+    // We're going to put down a bunch of stuff at random, so we
+    // will need a random number generator.
+    let mut rng = rand::thread_rng();
 
-    commands.spawn((MapCell {
-        col: 0,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/pine3.png"),
-    },));
-    commands
-        .spawn((MapCell {
-            col: 1,
-            row: 1,
-            texture_handle: asset_server.get_handle("terrain/pine2.png"),
-        },))
-        .with(MapCellRefreshNeeded);
-    commands.spawn((MapCell {
-        col: 2,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/tree1.png"),
-    },));
+    for row in 0..12 {
+        for col in 0..20 {
+            // Most likely to just be grass, but throw in some
+            // trees as well.
+            let tile_type = match rng.gen_range(0..50) {
+                0 => "terrain/tree6.png",
+                1 => "terrain/pine6.png",
+                2..=3 => "terrain/tree3.png",
+                4..=5 => "terrain/pine3.png",
+                6..=8 => "terrain/tree2.png",
+                9..=11 => "terrain/pine2.png",
+                12..=15 => "terrain/tree2.png",
+                16..=19 => "terrain/pine2.png",
+                20..=30 => "terrain/grass1.png",
+                _ => "terrain/grass2.png",
+            };
 
-    commands.spawn((MapCell {
-        col: 0,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands
-        .spawn((MapCell {
-            col: 2,
-            row: 2,
-            texture_handle: asset_server.get_handle("terrain/grass2.png"),
-        },))
-        .with(MapCellRefreshNeeded);
-    commands.spawn((MapCell {
-        col: 3,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-
-    commands.spawn((MapCell {
-        col: 0,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/pine1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-}
-
-struct DelayCounter {
-    count: i32,
-}
-
-impl Default for DelayCounter {
-    fn default() -> Self {
-        DelayCounter { count: 0 }
+            commands
+                .spawn((MapCell {
+                    col: col,
+                    row: row,
+                    texture_handle: asset_server.get_handle(tile_type),
+                },))
+                .with(MapCellRefreshNeeded);
+        }
     }
-}
-
-/// This is to demostrate map growing if a sprite is added later.
-fn add_later_cell_system(
-    mut counter: Local<DelayCounter>,
-    commands: &mut Commands,
-    asset_server: Res<AssetServer>,
-) {
-    if counter.count == 10 {
-        commands
-            .spawn((MapCell {
-                col: 4,
-                row: 4,
-                texture_handle: asset_server.get_handle("terrain/sand1.png"),
-            },))
-            .with(MapCellRefreshNeeded);
-    }
-    counter.count += 1;
 }
 
 /// Creates the sprite that shows our assembled map.
@@ -632,7 +546,6 @@ fn main() {
         // correspond to the mapcell location (enter, exit, click -- maybe motion?)
         // TODO possibly also a global resource for current hovered or selected mapcell entity?
         //
-        .add_system_to_stage(stage::LAST, add_later_cell_system.system())
         // And finally, this, which fires off the actual game loop.
         .run()
 }

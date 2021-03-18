@@ -14,3 +14,6 @@ license = "MIT"
 
 [dependencies]
 bevy = { version = "0.4", default-features = false, features = ["bevy_winit","bevy_wgpu","render","png","hdr","x11"] }
+
+[dev-dependencies]
+rand = "^0.8"
