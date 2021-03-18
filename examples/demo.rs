@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 
 // Built-in Bevy plugins to print FPS to console.
-//use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
@@ -82,6 +82,9 @@ struct MapEngineMap {
     /// Each cell must be the same; keeping it here saves us reading it later.
     cell_height: usize,
 }
+
+/// This component tags a sprite as map sprite
+struct MapEngineSprite;
 
 impl Default for MapEngineMap {
     /// default to an empty texture
@@ -352,21 +355,64 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
     },));
 }
 
-/// This is a playground for creating the map texture
-/// TODO Right now, this is a run-once startup system. Change it to run every frame _if_ entities have changed.
-fn maptexture_system(
+/// Creates the sprite that shows our assembled map.
+fn create_map_sprite_system(
+    commands: &mut Commands,
+    mut textures: ResMut<Assets<Texture>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mapengine_map: Res<MapEngineMap>,
+) {
+    // The resource MapEngineMap should already be defined, including
+    // a tiny empty texture.
+    // This line does two things: adds that texture
+    // as a global resource, and also gets us a handle to put into
+    // the SpriteBundle as a material. Bevy needs both of these things
+    // in order to actually render.
+    let map_texture_handle = textures.add(mapengine_map.texture.clone());
+
+    // And here is our "sprite" which shows the whole map. I use "sprite"
+    // in scare quotes because it might be quite a bit larger than what
+    // that name normally implies, but, hey, we work with what we have.
+    // We add the MapEngineSprite component so we can keep this straight
+    // from any other sprites.
+    commands
+        .spawn(SpriteBundle {
+            material: materials.add(map_texture_handle.into()),
+            ..Default::default()
+        })
+        .with(MapEngineSprite);
+}
+
+/// Draw cells that need updated onto the map texture.
+///
+/// This runs every frame when the engine is in the Running state, so it
+/// is important to not do slow things. Unfortunately, because Bevy
+/// does not yet support GPU texture-to-texture copy or batched rendering,
+/// there are more slow operations here than ideal.
+///
+/// The first Query here returns MapCell entities that have MapCellRefreshNeeded
+/// And the second one gets us all of our map sprites. (There might be
+/// more than one for a different view into the same map; that's to be implemented.)
+fn maptexture_update_system(
     commands: &mut Commands,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
     mapcells: Query<&MapCell, With<MapCellRefreshNeeded>>,
+    mapsprites: Query<(&Sprite, &Handle<ColorMaterial>), With<MapEngineSprite>>,
 ) {
-    // MapCells are entities in the World. Iterate through them
-    // here and draw them onto the map texture.
+    // MapCells are entities in the World. They should be tagged
+    // with MapCellRefreshNeeded if they've changed in appearance,
+    // which will cause this system to get them.
+
+    // FIXME refactor to be a no-op if mapcells is empty
+    // (without needing to go through them an extra time when it isn't!)
 
     let mut cols = 0;
     let mut rows = 0;
     // This first pass gathers information needed to size the map texture.
+    // TODO This doubles the number of times we go through the list;
+    // consider if it is really the best way.
     for mapcell in mapcells.iter() {
         // Find the furthest-from 0,0 rows and columns.
         // The +1 is because we are zero-indexed, so if everything is in col 0
@@ -377,6 +423,7 @@ fn maptexture_system(
 
     // Here we create a shiny new empty texture which will serve as
     // the "canvas" for our world map, big enough to hold the above.
+    // FIXME don't create a new canvas every time!
     let map_width = mapengine_map.cell_width;
     let map_height = mapengine_map.cell_height;
     mapengine_map.texture = Texture::new_fill(
@@ -412,15 +459,13 @@ fn maptexture_system(
     }
 
     // This does two things: gets us the handle to put into the
-    // sprite, and also addes the texture as a global resource. Bevy
+    // sprite, and also adds the texture as a global resource. Bevy
     // needs both of these things to happen in order to actually render.
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
+    //let new_map_material_handle: Handle<ColorMaterial> = map_texture_handle.into();
 
-    // This "sprite" shows the whole map.
-    commands.spawn(SpriteBundle {
-        material: materials.add(map_texture_handle.into()),
-        ..Default::default()
-    });
+    let (_mapsprite, material) = mapsprites.iter().next().unwrap();
+    materials.get_mut(material).unwrap().texture = Some(map_texture_handle);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -446,7 +491,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
         // TODO add a command line option to turn these two on or off instead of messing with comments
-        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         //.add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
@@ -497,14 +542,19 @@ fn main() {
             MapEngineState::Verifying,
             verify_tiles_system.system(),
         )
-        // This system will run once when we get to the Running state.
-        // It's a temporary thing, because eventually we want a system which
-        // runs every frame looking for changed MapCell entities.
-        // TODO make run on_state_update istead of on_state_enter
+        // When we get to the Running state, add our map sprite
         .on_state_enter(
             MAPENGINE_STAGE,
             MapEngineState::Running,
-            maptexture_system.system(),
+            create_map_sprite_system.system(),
+        )
+        // This system runs every frame once we are in the Running state.
+        // Because it happens all the time, it needs to be careful to not
+        // do slow things. See the code in the maptexture_update_system itself.
+        .on_state_update(
+            MAPENGINE_STAGE,
+            MapEngineState::Running,
+            maptexture_update_system.system(),
         )
         // TODO add a validator which runs periodically and checks for overlapping MapCells?
         // TODO add a system which takes mouse events and translates them into new events that
