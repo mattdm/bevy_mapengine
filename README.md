@@ -17,6 +17,12 @@ game engine.
 It is intended to make it easy and quick to make top-down or side-view
 games in Bevy.
 
+A lot of this is kludging around functionality that just isn't there yet
+in Bevy itself. My hope is for most of that to go away, and in fact
+perhaps all of the drawing-related parts of this plugin might become
+obsolete, leaving it just a convienent way to manage the camera and
+scroll/zoom with a 2D tilemap. But we'll see how it all goes!
+
 Try it!
 -------
 
@@ -58,11 +64,12 @@ should be seamless the point of view of a user of the plugin.
 First priorities
 ----------------
 
-1. Load and display a grid of cells.
-2. Example which shows mouse-over
-3. Scrolling (with WASD and mouse examples)
-4. Bounds checking when scrolling
-5. Zoom (with ZXC and mouse examples)
+- [x] Load and display a grid of cells.
+- [ ] Refactor code from demo into actual library
+- [ ] Example which shows mouse-over
+- [ ] Scrolling (with WASD and mouse examples)
+- [ ] Bounds checking when scrolling
+- [ ] Zoom (with ZXC and mouse scrollwheel examples)
 
 Medium-term
 -----------
