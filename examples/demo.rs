@@ -55,8 +55,8 @@ struct MapCell {
     texture_handle: Handle<Texture>,
 }
 
-// TODO add a component which signals that a mapcell needs to be refreshed.
-// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
+/// This component signals that a mapcell needs to be refreshed.
+/// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
 struct MapCellRefreshNeeded;
 
 /// Bevy groups systems into stages. Our mapengine
@@ -261,11 +261,13 @@ fn setup_camera_system(commands: &mut Commands) {
 /// TODO Maybe parse a text file or multi-line string with character
 /// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((MapCell {
-        col: 0,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
+    commands
+        .spawn((MapCell {
+            col: 0,
+            row: 0,
+            texture_handle: asset_server.get_handle("terrain/grass2.png"),
+        },))
+        .with(MapCellRefreshNeeded);
     commands.spawn((MapCell {
         col: 1,
         row: 0,
@@ -287,11 +289,13 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
         row: 1,
         texture_handle: asset_server.get_handle("terrain/pine3.png"),
     },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/pine2.png"),
-    },));
+    commands
+        .spawn((MapCell {
+            col: 1,
+            row: 1,
+            texture_handle: asset_server.get_handle("terrain/pine2.png"),
+        },))
+        .with(MapCellRefreshNeeded);
     commands.spawn((MapCell {
         col: 2,
         row: 1,
@@ -313,11 +317,13 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
         row: 2,
         texture_handle: asset_server.get_handle("terrain/grass1.png"),
     },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
+    commands
+        .spawn((MapCell {
+            col: 2,
+            row: 2,
+            texture_handle: asset_server.get_handle("terrain/grass2.png"),
+        },))
+        .with(MapCellRefreshNeeded);
     commands.spawn((MapCell {
         col: 3,
         row: 2,
@@ -353,7 +359,7 @@ fn maptexture_system(
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
-    mapcells: Query<&MapCell>,
+    mapcells: Query<&MapCell, With<MapCellRefreshNeeded>>,
 ) {
     // MapCells are entities in the World. Iterate through them
     // here and draw them onto the map texture.
@@ -371,9 +377,6 @@ fn maptexture_system(
 
     // Here we create a shiny new empty texture which will serve as
     // the "canvas" for our world map, big enough to hold the above.
-    //
-    // Temporarily, this is bright red so we can see that it's working.
-    // TODO Make transparent.
     let map_width = mapengine_map.cell_width;
     let map_height = mapengine_map.cell_height;
     mapengine_map.texture = Texture::new_fill(
@@ -383,7 +386,9 @@ fn maptexture_system(
             1,
         ),
         TextureDimension::D2,
-        &[255, 0, 0, 255],
+        // transparent
+        // TODO make this configurable
+        &[0, 0, 0, 0],
         TextureFormat::Rgba8UnormSrgb,
     );
 
