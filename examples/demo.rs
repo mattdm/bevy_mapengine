@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 
 // Built-in Bevy plugins to print FPS to console.
-//use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
@@ -21,6 +21,7 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 use bevy::asset::LoadState;
 
 // Standard rust things...
+use rand::Rng;
 use std::cmp;
 
 /*----------------------------------------------------------------------------*/
@@ -41,15 +42,23 @@ enum MapEngineState {
 /// on the map; x and y should not change. Note also that I haven't
 /// decided on how to do layering, so duplicating (col,row) will
 /// lead to unpredictable results.
+/// FUTURE consider making col and row read-only using the readonly crate
+/// FUTURE make texture_handle a Vec, and draw in order?
+/// The other layering approach (adding depth, allowing multiple col,row)
+/// has the disadvantage that we need to find all of the entities to draw.
 #[derive(Debug)]
 struct MapCell {
     /// Column (x) position of this tile on the map. 0 is on the left.
     col: i32,
-    /// Row (y) position of this tile on the map. 0 is at thet op.
+    /// Row (y) position of this tile on the map. 0 is at the top.
     row: i32,
     /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
     texture_handle: Handle<Texture>,
 }
+
+/// This component signals that a mapcell needs to be refreshed.
+/// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
+struct MapCellRefreshNeeded;
 
 /// Bevy groups systems into stages. Our mapengine
 /// runs in its own stage, and this is its name.
@@ -69,18 +78,35 @@ struct MapEngineTileHandles {
 struct MapEngineMap {
     /// The actual texture to be drawn on
     texture: Texture,
+    /// Width of map in cells (texture width = cols × cell_width_pixels)
+    cols: i32,
+    /// Height of map in cells (texture height = rows × cell_height_pixels)
+    rows: i32,
     /// Each cell must be the same; keeping it here saves us reading it later.
-    cell_width: usize,
+    cell_width_pixels: usize,
     /// Each cell must be the same; keeping it here saves us reading it later.
-    cell_height: usize,
+    cell_height_pixels: usize,
 }
 
+/// This component tags a sprite as map sprite
+struct MapEngineSprite;
+
 impl Default for MapEngineMap {
+    /// default to an empty texture
     fn default() -> Self {
         MapEngineMap {
-            texture: Texture::default(),
-            cell_width: 0,
-            cell_height: 0,
+            // We start with the minimum possible texture size: 1×1
+            // FUTURE have a reasonable default and make configurable
+            texture: Texture::new_fill(
+                Extent3d::new(1, 1, 1),
+                TextureDimension::D2,
+                &[0, 0, 0, 0],
+                TextureFormat::Rgba8UnormSrgb,
+            ),
+            cols: 0,
+            rows: 0,
+            cell_width_pixels: 0,
+            cell_height_pixels: 0,
         }
     }
 }
@@ -94,9 +120,14 @@ impl Default for MapEngineMap {
 /// to do this always, but we are waiting on
 /// https://github.com/bevyengine/bevy/issues/1207#issuecomment-800602680
 /// for a real solution.
-fn copy_texture(target_texture: &mut Texture, texture: &Texture, rect_x: usize, rect_y: usize) {
-    let rect_width = texture.size.width as usize;
-    let rect_height = texture.size.height as usize;
+fn copy_texture(
+    target_texture: &mut Texture,
+    source_texture: &Texture,
+    rect_x: usize,
+    rect_y: usize,
+) {
+    let rect_width = source_texture.size.width as usize;
+    let rect_height = source_texture.size.height as usize;
     let target_width = target_texture.size.width as usize;
     let format_size = target_texture.format.pixel_size();
 
@@ -105,7 +136,8 @@ fn copy_texture(target_texture: &mut Texture, texture: &Texture, rect_x: usize, 
         let end = begin + rect_width * format_size;
         let texture_begin = texture_y * rect_width * format_size;
         let texture_end = texture_begin + rect_width * format_size;
-        target_texture.data[begin..end].copy_from_slice(&texture.data[texture_begin..texture_end]);
+        target_texture.data[begin..end]
+            .copy_from_slice(&source_texture.data[texture_begin..texture_end]);
     }
 }
 
@@ -143,7 +175,6 @@ fn load_tiles_system(
 /// Here, you can see that in addition to the resources the load system
 /// uses we also get the State resource. And since we don't modify the
 /// tilehandles here, that resource is not mutable.
-///
 fn wait_for_tile_load_system(
     mut state: ResMut<State<MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
@@ -166,15 +197,19 @@ fn wait_for_tile_load_system(
     }
 }
 
-/// Check to make sure all of the loaded tiles are valid and then advance
-/// to the next game State (Running).
+/// A system which shecs to make sure all of the loaded tiles are
+/// valid and then advances to the next game State (Running).
+/// A more advanced version of this could go to an Error state
+/// instead of existing on failure. Combined with dynamic asset
+/// loading, that could make it possible to actually fix the
+/// problem and resume.
 fn verify_tiles_system(
     mut state: ResMut<State<MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
     textures: Res<Assets<Texture>>,
     mut mapengine_map: ResMut<MapEngineMap>,
 ) {
-    // This crazy code:
+    // This crazy code does this:
     //
     // 1. Gets the widths, heights, and depths of all textures
     // 2. Sets mapengine_map height and width
@@ -199,16 +234,19 @@ fn verify_tiles_system(
         .map(|handle| textures.get(handle).unwrap().size.depth)
         .collect::<Vec<u32>>();
 
-    mapengine_map.cell_width = widths[0] as usize;
-    mapengine_map.cell_height = widths[0] as usize;
+    mapengine_map.cell_width_pixels = widths[0] as usize;
+    mapengine_map.cell_height_pixels = widths[0] as usize;
 
-    if widths.iter().any(|&w| w != mapengine_map.cell_width as u32) {
+    if widths
+        .iter()
+        .any(|&w| w != mapengine_map.cell_width_pixels as u32)
+    {
         eprintln!("Error! All tile textures must be the same width (at least one isn't).");
         std::process::exit(1)
     }
     if heights
         .iter()
-        .any(|&h| h != mapengine_map.cell_height as u32)
+        .any(|&h| h != mapengine_map.cell_height_pixels as u32)
     {
         eprintln!("Error! All tile textures must be the same height (at least one isn't).");
         std::process::exit(1)
@@ -221,8 +259,8 @@ fn verify_tiles_system(
     println!(
         "{:?} terrain textures of size {:?}×{:?} found.",
         widths.len(),
-        mapengine_map.cell_width,
-        mapengine_map.cell_height
+        mapengine_map.cell_width_pixels,
+        mapengine_map.cell_height_pixels
     );
 
     state.set_next(MapEngineState::Running).unwrap();
@@ -244,142 +282,159 @@ fn setup_camera_system(commands: &mut Commands) {
 
 /// This is a one-time system that spawns some MapCell components.
 /// For a future phase of this demo we'll need something more sophisticated,
-/// but this works for now.
+/// but this works for now. It needs Commands to do the spawning, and the
+/// AssetServer resource to get the handles for textures by name.
+/// FUTURE Maybe parse a text file or multi-line string with character
+/// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((MapCell {
-        col: 0,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 0,
-        texture_handle: asset_server.get_handle("terrain/tree2.png"),
-    },));
+    // We're going to put down a bunch of stuff at random, so we
+    // will need a random number generator.
+    let mut rng = rand::thread_rng();
 
-    commands.spawn((MapCell {
-        col: 0,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/pine3.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/pine2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 1,
-        texture_handle: asset_server.get_handle("terrain/tree1.png"),
-    },));
+    for row in 0..12 {
+        for col in 0..20 {
+            // Most likely to just be grass, but throw in some
+            // trees as well.
+            let tile_type = match rng.gen_range(0..50) {
+                0 => "terrain/tree6.png",
+                1 => "terrain/pine6.png",
+                2..=3 => "terrain/tree3.png",
+                4..=5 => "terrain/pine3.png",
+                6..=8 => "terrain/tree2.png",
+                9..=11 => "terrain/pine2.png",
+                12..=15 => "terrain/tree2.png",
+                16..=19 => "terrain/pine2.png",
+                20..=30 => "terrain/grass1.png",
+                _ => "terrain/grass2.png",
+            };
 
-    commands.spawn((MapCell {
-        col: 0,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 2,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-
-    commands.spawn((MapCell {
-        col: 0,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/pine1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 1,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 2,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass1.png"),
-    },));
-    commands.spawn((MapCell {
-        col: 3,
-        row: 3,
-        texture_handle: asset_server.get_handle("terrain/grass2.png"),
-    },));
+            commands
+                .spawn((MapCell {
+                    col: col,
+                    row: row,
+                    texture_handle: asset_server.get_handle(tile_type),
+                },))
+                .with(MapCellRefreshNeeded);
+        }
+    }
 }
 
-/// This is a playground for creating the map texture
-fn maptexture_system(
+/// Creates the sprite that shows our assembled map.
+fn create_map_sprite_system(
+    commands: &mut Commands,
+    mut textures: ResMut<Assets<Texture>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mapengine_map: Res<MapEngineMap>,
+) {
+    // The resource MapEngineMap should already be defined, including
+    // a tiny empty texture.
+    // This line does two things: adds that texture as a global resource,
+    // and also gets us a handle to put into the SpriteBundle as a material.
+    // Bevy needs both of these things in order to actually render.
+    let map_texture_handle = textures.add(mapengine_map.texture.clone());
+
+    // And here is our "sprite" which shows the whole map. I use "sprite"
+    // in scare quotes because it might be quite a bit larger than what
+    // that name normally implies, but, hey, we work with what we have.
+    // We add the MapEngineSprite component so we can keep this straight
+    // from any other sprites.
+    commands
+        .spawn(SpriteBundle {
+            material: materials.add(map_texture_handle.into()),
+            ..Default::default()
+        })
+        .with(MapEngineSprite);
+}
+
+/// Draw cells that need updated onto the map texture.
+///
+/// TODO Handle removal of cells, not just addition
+///
+/// This runs every frame when the engine is in the Running state, so it
+/// is important to not do slow things. Unfortunately, because Bevy
+/// does not yet support GPU texture-to-texture copy or batched rendering,
+/// there are more slow operations here than ideal.
+///
+/// The first Query here returns MapCell entities that have MapCellRefreshNeeded
+/// And the second one gets us all of our map sprites. (There might be
+/// more than one for a different view into the same map; that's to be implemented.)
+fn maptexture_update_system(
     commands: &mut Commands,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
-    mapcells: Query<&MapCell>,
+    mapcells: Query<(Entity, &MapCell), With<MapCellRefreshNeeded>>,
+    mapsprites: Query<&Handle<ColorMaterial>, With<MapEngineSprite>>,
 ) {
-    // MapCells are entities in the World. Iterate through them
-    // here and draw them onto the map texture.
+    // MapCells are entities in the World. They should be tagged
+    // with MapCellRefreshNeeded if they've changed in appearance,
+    // which will cause this system to get them.
 
-    let mut cols = 0;
-    let mut rows = 0;
-    // This first pass gathers information needed to size the map texture.
-    for mapcell in mapcells.iter() {
+    // This first pass gathers information needed to size the map texture,
+    // and if we need to do anything at all.
+    // TODO This doubles the number of times we go through the list;
+    // consider if it is really the best way.
+    let mut count = 0;
+    for (_entity, mapcell) in mapcells.iter() {
         // Find the furthest-from 0,0 rows and columns.
         // The +1 is because we are zero-indexed, so if everything is in col 0
         // we still need a cell_width-wide map.
-        cols = cmp::max(cols, mapcell.col + 1);
-        rows = cmp::max(rows, mapcell.row + 1);
+        mapengine_map.cols = cmp::max(mapengine_map.cols, mapcell.col + 1);
+        mapengine_map.rows = cmp::max(mapengine_map.rows, mapcell.row + 1);
+        count += 1;
+    }
+    // If there aren't any, exit now.
+    // TODO Refactor so this happens instantly at the beginning of the system
+    if count == 0 {
+        return;
     }
 
-    // Here we create a shiny new empty texture which will serve as
-    // the "canvas" for our world map, big enough to hold the above.
-    //
-    // Temporarily, this is bright red so we can see that it's working.
-    let map_width = mapengine_map.cell_width;
-    let map_height = mapengine_map.cell_height;
-    mapengine_map.texture = Texture::new_fill(
-        Extent3d::new(
-            cols as u32 * map_width as u32,
-            rows as u32 * map_height as u32,
-            1,
-        ),
-        TextureDimension::D2,
-        &[255, 0, 0, 255],
-        TextureFormat::Rgba8UnormSrgb,
-    );
+    // We need to copy these out of the resource because later there's
+    // a mutable+immutable borrow attempt if we don't have our own copy.
+    let cell_width_pixels = mapengine_map.cell_width_pixels;
+    let cell_height_pixels = mapengine_map.cell_height_pixels;
+
+    // If our existing texture is too small, create a new bigger one.
+    if mapengine_map.texture.size.width < mapengine_map.cols as u32 * cell_width_pixels as u32
+        || mapengine_map.texture.size.height < mapengine_map.rows as u32 * cell_height_pixels as u32
+    {
+        println!(
+            "Resizing map texture from {:?}×{:?} to {:?}×{:?}.",
+            mapengine_map.texture.size.width,
+            mapengine_map.texture.size.height,
+            mapengine_map.cols as u32 * cell_width_pixels as u32,
+            mapengine_map.rows as u32 * cell_height_pixels as u32,
+        );
+        let mut new_texture = Texture::new_fill(
+            Extent3d::new(
+                mapengine_map.cols as u32 * cell_width_pixels as u32,
+                mapengine_map.rows as u32 * cell_height_pixels as u32,
+                1,
+            ),
+            TextureDimension::D2,
+            // transparent
+            // FUTURE make this configurable
+            &[0, 0, 0, 0],
+            TextureFormat::Rgba8UnormSrgb,
+        );
+
+        // copy the old texture to the new one — 0,0 for top left
+        copy_texture(&mut new_texture, &mapengine_map.texture, 0, 0);
+
+        // and swap it in.
+        mapengine_map.texture = new_texture;
+    }
 
     // And now we iterate through again and do the actual copying
-    for mapcell in mapcells.iter() {
-        //let cell_texture = textures.get(&mapcell.texture_handle).unwrap();
+    for (entity, mapcell) in mapcells.iter() {
+        // Each cell has a handle to the texture which should represent it visually
         match textures.get(&mapcell.texture_handle) {
             Some(cell_texture) => {
                 copy_texture(
                     &mut mapengine_map.texture,
                     &cell_texture,
-                    mapcell.col as usize * map_width,
-                    mapcell.row as usize * map_height,
+                    mapcell.col as usize * cell_width_pixels,
+                    mapcell.row as usize * cell_height_pixels,
                 );
             }
             None => {
@@ -387,15 +442,20 @@ fn maptexture_system(
                 std::process::exit(2);
             }
         };
+        commands.remove_one::<MapCellRefreshNeeded>(entity);
     }
 
+    // As above, this does two things: gets us the handle to put into the
+    // sprite, and also adds the texture as a global resource. Bevy
+    // needs both of these things to happen in order to actually render.
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
 
-    // This "sprite" shows the whole map.
-    commands.spawn(SpriteBundle {
-        material: materials.add(map_texture_handle.into()),
-        ..Default::default()
-    });
+    // We only need to grab the first map sprite, because they
+    // all share the same material. And if there isn't one, that's fine;
+    // we'll update it once there is in a future pass.
+    if let Some(material) = mapsprites.iter().next() {
+        materials.get_mut(material).unwrap().texture = Some(map_texture_handle);
+    };
 }
 
 /*----------------------------------------------------------------------------*/
@@ -406,7 +466,7 @@ fn main() {
         // which that plugin looks for to find its configuration. This is a
         // common Bevy pattern for configuring plugins.
         .add_resource(WindowDescriptor {
-            title: "Bevy Mapengine Demo".to_string(),
+            title: "Bevy MapEngine Demo".to_string(),
             width: 1280.,
             height: 720.,
             vsync: true,
@@ -420,8 +480,9 @@ fn main() {
         // gltf (a 3d graphic format) are disabled in Cargo.toml.
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
-        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
-        //.add_plugin(PrintDiagnosticsPlugin::default())
+        // FUTURE add a command line option to turn these two on or off instead of messing with comments
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
         // Now, we are finally on to our own code — that is, stuff here in this demo.
@@ -471,14 +532,27 @@ fn main() {
             MapEngineState::Verifying,
             verify_tiles_system.system(),
         )
-        // This system will run once when we get to the Running state.
-        // It's a temporary thing, because eventually we want a system which
-        // runs every frame looking for changed MapCell entities.
+        // When we get to the Running state, add our map sprite
         .on_state_enter(
             MAPENGINE_STAGE,
             MapEngineState::Running,
-            maptexture_system.system(),
+            create_map_sprite_system.system(),
         )
+        // This system runs every frame once we are in the Running state.
+        // Because it happens all the time, it needs to be careful to not
+        // do slow things. See the code in the maptexture_update_system itself.
+        .on_state_update(
+            MAPENGINE_STAGE,
+            MapEngineState::Running,
+            maptexture_update_system.system(),
+        )
+        // FUTURE add a validator which runs periodically and checks for overlapping MapCells?
+        // NEXT add a system which takes mouse events and translates them into new events that
+        // correspond to the mapcell location (enter, exit, click -- maybe motion?)
+        // NEXT possibly also a global resource for current hovered or selected mapcell entity?
+        // FUTURE map scrolling (with the mouse stuff still working!)
+        // FUTURE map zooming (with the mouse stuff still working!)
+        //
         // And finally, this, which fires off the actual game loop.
         .run()
 }

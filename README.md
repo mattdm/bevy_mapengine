@@ -3,6 +3,11 @@ bevy_mapengine
 
 A 2D tilemap plugin for the Bevy game engine.
 
+Screenshot
+----------
+
+![This is all that 0.0.4 does.](examples/screenshots/screenshot-0.0.4.png)
+
 What is this?
 -------------
 
@@ -103,6 +108,12 @@ more on the UI and things like correlating clicks to tiles.
 
 With Bevy Tilemap, tiles are added to a data structure held by the
 Tilemap itself. Here instead each cell is actually an Entity in Bevy.
+
+Who are you then?
+-----------------
+
+Not a Bevy expert, nor a Rust one. Just wanted to make something for
+myself, and hopefully useful to others as well.
 
 License
 -------
