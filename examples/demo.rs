@@ -399,7 +399,7 @@ fn maptexture_update_system(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
     mapcells: Query<&MapCell, With<MapCellRefreshNeeded>>,
-    mapsprites: Query<(&Sprite, &Handle<ColorMaterial>), With<MapEngineSprite>>,
+    mapsprites: Query<&Handle<ColorMaterial>, With<MapEngineSprite>>,
 ) {
     // MapCells are entities in the World. They should be tagged
     // with MapCellRefreshNeeded if they've changed in appearance,
@@ -456,16 +456,20 @@ fn maptexture_update_system(
                 std::process::exit(2);
             }
         };
+        // TODO Remove MapCellRefreshNeeded from this entity!
     }
 
     // This does two things: gets us the handle to put into the
     // sprite, and also adds the texture as a global resource. Bevy
     // needs both of these things to happen in order to actually render.
     let map_texture_handle = textures.add(mapengine_map.texture.clone());
-    //let new_map_material_handle: Handle<ColorMaterial> = map_texture_handle.into();
 
-    let (_mapsprite, material) = mapsprites.iter().next().unwrap();
-    materials.get_mut(material).unwrap().texture = Some(map_texture_handle);
+    // we only need to grab the first map sprite, because they
+    // all share the same material. And if there isn't one, that's fine;
+    // we'll update it once there is in a future pass.
+    if let Some(material) = mapsprites.iter().next() {
+        materials.get_mut(material).unwrap().texture = Some(map_texture_handle);
+    };
 }
 
 /*----------------------------------------------------------------------------*/
