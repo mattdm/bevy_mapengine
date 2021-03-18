@@ -42,8 +42,8 @@ enum MapEngineState {
 /// on the map; x and y should not change. Note also that I haven't
 /// decided on how to do layering, so duplicating (col,row) will
 /// lead to unpredictable results.
-/// TODO consider making col and row read-only using the readonly crate
-/// TODO make texture_handle a Vec, and draw in order?
+/// FUTURE consider making col and row read-only using the readonly crate
+/// FUTURE make texture_handle a Vec, and draw in order?
 /// The other layering approach (adding depth, allowing multiple col,row)
 /// has the disadvantage that we need to find all of the entities to draw.
 #[derive(Debug)]
@@ -96,7 +96,7 @@ impl Default for MapEngineMap {
     fn default() -> Self {
         MapEngineMap {
             // We start with the minimum possible texture size: 1×1
-            // TODO have a reasonable default and make configurable
+            // FUTURE have a reasonable default and make configurable
             texture: Texture::new_fill(
                 Extent3d::new(1, 1, 1),
                 TextureDimension::D2,
@@ -284,7 +284,7 @@ fn setup_camera_system(commands: &mut Commands) {
 /// For a future phase of this demo we'll need something more sophisticated,
 /// but this works for now. It needs Commands to do the spawning, and the
 /// AssetServer resource to get the handles for textures by name.
-/// TODO Maybe parse a text file or multi-line string with character
+/// FUTURE Maybe parse a text file or multi-line string with character
 /// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
     // We're going to put down a bunch of stuff at random, so we
@@ -370,18 +370,23 @@ fn maptexture_update_system(
     // with MapCellRefreshNeeded if they've changed in appearance,
     // which will cause this system to get them.
 
-    // FIXME refactor to be a no-op if mapcells is empty
-    // (without needing to go through them an extra time when it isn't!)
-
-    // This first pass gathers information needed to size the map texture.
+    // This first pass gathers information needed to size the map texture,
+    // and if we need to do anything at all.
     // TODO This doubles the number of times we go through the list;
     // consider if it is really the best way.
+    let mut count = 0;
     for (_entity, mapcell) in mapcells.iter() {
         // Find the furthest-from 0,0 rows and columns.
         // The +1 is because we are zero-indexed, so if everything is in col 0
         // we still need a cell_width-wide map.
         mapengine_map.cols = cmp::max(mapengine_map.cols, mapcell.col + 1);
         mapengine_map.rows = cmp::max(mapengine_map.rows, mapcell.row + 1);
+        count += 1;
+    }
+    // If there aren't any, exit now.
+    // TODO Refactor so this happens instantly at the beginning of the system
+    if count == 0 {
+        return;
     }
 
     // We need to copy these out of the resource because later there's
@@ -408,7 +413,7 @@ fn maptexture_update_system(
             ),
             TextureDimension::D2,
             // transparent
-            // TODO make this configurable
+            // FUTURE make this configurable
             &[0, 0, 0, 0],
             TextureFormat::Rgba8UnormSrgb,
         );
@@ -461,7 +466,7 @@ fn main() {
         // which that plugin looks for to find its configuration. This is a
         // common Bevy pattern for configuring plugins.
         .add_resource(WindowDescriptor {
-            title: "Bevy Mapengine Demo".to_string(),
+            title: "Bevy MapEngine Demo".to_string(),
             width: 1280.,
             height: 720.,
             vsync: true,
@@ -475,7 +480,7 @@ fn main() {
         // gltf (a 3d graphic format) are disabled in Cargo.toml.
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
-        // TODO add a command line option to turn these two on or off instead of messing with comments
+        // FUTURE add a command line option to turn these two on or off instead of messing with comments
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
@@ -541,10 +546,12 @@ fn main() {
             MapEngineState::Running,
             maptexture_update_system.system(),
         )
-        // TODO add a validator which runs periodically and checks for overlapping MapCells?
-        // TODO add a system which takes mouse events and translates them into new events that
+        // FUTURE add a validator which runs periodically and checks for overlapping MapCells?
+        // NEXT add a system which takes mouse events and translates them into new events that
         // correspond to the mapcell location (enter, exit, click -- maybe motion?)
-        // TODO possibly also a global resource for current hovered or selected mapcell entity?
+        // NEXT possibly also a global resource for current hovered or selected mapcell entity?
+        // FUTURE map scrolling (with the mouse stuff still working!)
+        // FUTURE map zooming (with the mouse stuff still working!)
         //
         // And finally, this, which fires off the actual game loop.
         .run()
