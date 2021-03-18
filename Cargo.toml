@@ -1,6 +1,6 @@
 [package]
 name = "bevy_mapengine"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Matthew Miller <mattdm@mattdm.org>"]
 publish = false
 repository = "https://github.com/mattdm/bevy_mapengine"
@@ -14,3 +14,6 @@ license = "MIT"
 
 [dependencies]
 bevy = { version = "0.4", default-features = false, features = ["bevy_winit","bevy_wgpu","render","png","hdr","x11"] }
+
+[dev-dependencies]
+rand = "^0.8"
