@@ -1,11 +1,4 @@
-/// Ripped from bevy_sprite/src/texture_atlas_builder.rs.
-///
-/// This doesn't really copy actual GPU textures. It copies bits
-/// in a Vec representing RGBA data. This is not going way we want
-/// to do this always, but we are waiting on
-/// https://github.com/bevyengine/bevy/issues/1207#issuecomment-800602680
-/// for a real solution.
-///
+///  This collection of systems handles loading of the tileset for the map
 ///
 //
 
@@ -17,6 +10,13 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 // Standard rust things...
 use std::cmp;
 
+/// Ripped from bevy_sprite/src/texture_atlas_builder.rs.
+///
+/// This doesn't really copy actual GPU textures. It copies bits
+/// in a Vec representing RGBA data. This is not going way we want
+/// to do this always, but we are waiting on
+/// https://github.com/bevyengine/bevy/issues/1207#issuecomment-800602680
+/// for a real solution.
 fn copy_texture(
     target_texture: &mut Texture,
     source_texture: &Texture,
@@ -91,7 +91,10 @@ pub fn maptexture_update_system(
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<crate::MapEngineMap>,
-    mapspaces: Query<(Entity, &crate::MapSpace), With<crate::MapSpaceRefreshNeeded>>,
+    mapspaces: Query<
+        (Entity, &crate::map_space::MapSpace),
+        With<crate::map_space::MapSpaceRefreshNeeded>,
+    >,
     mapsprites: Query<&Handle<ColorMaterial>, With<crate::MapEngineSprite>>,
 ) {
     // MapSpaces are entities in the World. They should be tagged
@@ -173,7 +176,7 @@ pub fn maptexture_update_system(
                 std::process::exit(2);
             }
         };
-        commands.remove_one::<crate::MapSpaceRefreshNeeded>(entity);
+        commands.remove_one::<crate::map_space::MapSpaceRefreshNeeded>(entity);
     }
 
     // As above, this does two things: gets us the handle to put into the

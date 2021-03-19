@@ -1,9 +1,21 @@
-/// This collection of systems handles loading of the tileset for the map
+/// This collection of systems for collecting MapSpace entities from the
+/// World and drawing them on our map Sprite to be rendered by Bevy.
+//
+
 // This is the basic Bevy game engine stuff
 use bevy::prelude::*;
 
 // Used to tell if assets are loaded ... see check_tiles_loaded_system()
 use bevy::asset::LoadState;
+
+/// Our list of handles to tile images is stored as a global
+/// Bevy resource so we can use them in various systems. In Bevy,
+/// these global resources are located by type, so we need a custom
+/// type to do this.
+#[derive(Default)]
+pub struct MapEngineTileHandles {
+    handles: Vec<HandleUntyped>,
+}
 
 /// This function is a "system" — see the App builder in main(), below.
 /// It is configured there to run once at the beginning of the initial
@@ -16,7 +28,7 @@ use bevy::asset::LoadState;
 /// we defined above (and initialize as a resource in main()).
 pub fn load_tiles_system(
     asset_server: Res<AssetServer>,
-    mut tilehandles: ResMut<crate::MapEngineTileHandles>,
+    mut tilehandles: ResMut<MapEngineTileHandles>,
 ) {
     // The asset server defaults to looking in the `assets` directory.
     // This call loads everything in the `terrain` subfolder as our
@@ -40,7 +52,7 @@ pub fn load_tiles_system(
 /// tilehandles here, that resource is not mutable.
 pub fn wait_for_tile_load_system(
     mut state: ResMut<State<crate::MapEngineState>>,
-    tilehandles: ResMut<crate::MapEngineTileHandles>,
+    tilehandles: ResMut<MapEngineTileHandles>,
     asset_server: Res<AssetServer>,
 ) {
     // Note that this is pretty much always going to be "NotLoaded" until it becomes "Loaded".
@@ -68,7 +80,7 @@ pub fn wait_for_tile_load_system(
 /// problem and resume.
 pub fn verify_tiles_system(
     mut state: ResMut<State<crate::MapEngineState>>,
-    tilehandles: ResMut<crate::MapEngineTileHandles>,
+    tilehandles: ResMut<MapEngineTileHandles>,
     textures: Res<Assets<Texture>>,
     mut mapengine_map: ResMut<crate::MapEngineMap>,
 ) {

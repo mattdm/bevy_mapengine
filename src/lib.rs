@@ -16,6 +16,8 @@ use bevy::prelude::*;
 // These are used for creating the map texture
 use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 
+pub use map_space::{MapSpace, MapSpaceRefreshNeeded};
+
 /*----------------------------------------------------------------------------*/
 
 /// An internal collection of systems which handles loading tiles from
@@ -26,6 +28,9 @@ mod tileloader_systems;
 /// Our collection of systems for collecting MapSpace entities from the
 /// World and drawing them on our map Sprite to be rendered by Bevy.
 mod map_systems;
+
+/// Structs which define the MapSpace component type
+mod map_space;
 
 /*----------------------------------------------------------------------------*/
 
@@ -42,42 +47,6 @@ pub enum MapEngineState {
     Loading,
     Verifying,
     Running,
-}
-
-/// This is a Bevy Component that defines an Entity as representing
-/// a space on our map, and holds the location and the tile image
-/// to use. Note that these are meant to represent fixed locations
-/// on the map; x and y should not change. Note also that I haven't
-/// decided on how to do layering, so duplicating (col,row) will
-/// lead to unpredictable results.
-///
-/// FUTURE consider making col and row read-only using the readonly crate
-/// FUTURE make texture_handle a Vec, and draw in order?
-/// The other layering approach (adding depth, allowing multiple col,row)
-/// has the disadvantage that we need to find all of the entities to draw.
-// FIXME texture handle should not need to be public, so we need a constructor
-#[derive(Debug)]
-pub struct MapSpace {
-    /// Column (x) position of this tile on the map. 0 is on the left.
-    pub col: i32,
-    /// Row (y) position of this tile on the map. 0 is at the top.
-    pub row: i32,
-    /// load with, for example, `asset_server.get_handle("terrain/grass1.png")`
-    pub texture_handle: Handle<Texture>,
-}
-
-/// This component signals that a MapSpace needs to be refreshed.
-/// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
-// TODO make not public?
-pub struct MapSpaceRefreshNeeded;
-
-/// Our list of handles to tile images is stored as a global
-/// Bevy resource so we can use them in various systems. In Bevy,
-/// these global resources are located by type, so we need a custom
-/// type to do this.
-#[derive(Default)]
-pub struct MapEngineTileHandles {
-    handles: Vec<HandleUntyped>,
 }
 
 /// This is for the global resource that holds our map information.
@@ -124,7 +93,7 @@ pub struct MapEnginePlugin;
 impl Plugin for MapEnginePlugin {
     fn build(&self, app: &mut AppBuilder) {
         // A stash of handles to our image tiles, so we can use them everywhere.
-        app.init_resource::<MapEngineTileHandles>()
+        app.init_resource::<tileloader_systems::MapEngineTileHandles>()
             // This adds a "Stage" (basically, a group of systems) set up to handle our
             // various "States". Our stage, used in the MapEngine, will run right after
             // the default UPDATE stage. This is important because otherwise we will miss
