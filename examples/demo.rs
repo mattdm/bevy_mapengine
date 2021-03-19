@@ -2,6 +2,9 @@
 /// Eventually, there will be other, smaller examples for specific
 /// features. But we don't have any features yet, so here we are.
 ///
+/*----------------------------------------------------------------------------*/
+//
+
 // This is the basic Bevy game engine stuff
 use bevy::prelude::*;
 

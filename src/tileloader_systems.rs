@@ -1,5 +1,6 @@
 /// This collection of systems for collecting MapSpace entities from the
 /// World and drawing them on our map Sprite to be rendered by Bevy.
+/*----------------------------------------------------------------------------*/
 //
 
 // This is the basic Bevy game engine stuff
@@ -82,7 +83,7 @@ pub fn verify_tiles_system(
     mut state: ResMut<State<crate::MapEngineState>>,
     tilehandles: ResMut<MapEngineTileHandles>,
     textures: Res<Assets<Texture>>,
-    mut mapengine_map: ResMut<crate::MapEngineMap>,
+    mut mapengine_map: ResMut<crate::map::Map>,
 ) {
     // This crazy code does this:
     //

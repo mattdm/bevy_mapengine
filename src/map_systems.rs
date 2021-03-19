@@ -1,5 +1,6 @@
 ///  This collection of systems handles loading of the tileset for the map
 ///
+/*----------------------------------------------------------------------------*/
 //
 
 // This is the basic Bevy game engine stuff
@@ -52,7 +53,7 @@ pub fn create_map_sprite_system(
     commands: &mut Commands,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mapengine_map: Res<crate::MapEngineMap>,
+    mapengine_map: Res<crate::map::Map>,
 ) {
     // The resource MapEngineMap should already be defined, including
     // a tiny empty texture.
@@ -71,7 +72,7 @@ pub fn create_map_sprite_system(
             material: materials.add(map_texture_handle.into()),
             ..Default::default()
         })
-        .with(crate::MapEngineSprite);
+        .with(crate::map::MapEngineSprite);
 }
 
 /// Draw spaces that need updated onto the map texture.
@@ -90,12 +91,12 @@ pub fn maptexture_update_system(
     commands: &mut Commands,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut mapengine_map: ResMut<crate::MapEngineMap>,
+    mut mapengine_map: ResMut<crate::map::Map>,
     mapspaces: Query<
         (Entity, &crate::map_space::MapSpace),
         With<crate::map_space::MapSpaceRefreshNeeded>,
     >,
-    mapsprites: Query<&Handle<ColorMaterial>, With<crate::MapEngineSprite>>,
+    mapsprites: Query<&Handle<ColorMaterial>, With<crate::map::MapEngineSprite>>,
 ) {
     // MapSpaces are entities in the World. They should be tagged
     // with MapSpaceRefreshNeeded if they've changed in appearance,

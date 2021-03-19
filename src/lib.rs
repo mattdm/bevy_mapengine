@@ -9,12 +9,11 @@
 //!
 //!
 //!
+/*----------------------------------------------------------------------------*/
+//
 
 // This is the basic Bevy game engine stuff
 use bevy::prelude::*;
-
-// These are used for creating the map texture
-use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 
 pub use map_space::{MapSpace, MapSpaceRefreshNeeded};
 
@@ -32,6 +31,9 @@ mod map_systems;
 /// Structs which define the MapSpace component type
 mod map_space;
 
+/// For the actual representation of the tile map
+mod map;
+
 /*----------------------------------------------------------------------------*/
 
 /// Bevy groups systems into stages. Our mapengine
@@ -48,43 +50,6 @@ pub enum MapEngineState {
     Verifying,
     Running,
 }
-
-/// This is for the global resource that holds our map information.
-pub struct MapEngineMap {
-    /// The actual texture to be drawn on
-    texture: Texture,
-    /// Width of map in spaces (texture width = cols × space_width_pixels)
-    cols: i32,
-    /// Height of map in spaces (texture height = rows × space_height_pixels)
-    rows: i32,
-    /// Each space must be the same; keeping it here saves us reading it later.
-    space_width_pixels: usize,
-    /// Each space must be the same; keeping it here saves us reading it later.
-    space_height_pixels: usize,
-}
-
-impl Default for MapEngineMap {
-    /// default to an empty texture
-    fn default() -> Self {
-        MapEngineMap {
-            // We start with the minimum possible texture size: 1×1
-            // FUTURE have a reasonable default and make configurable
-            texture: Texture::new_fill(
-                Extent3d::new(1, 1, 1),
-                TextureDimension::D2,
-                &[0, 0, 0, 0],
-                TextureFormat::Rgba8UnormSrgb,
-            ),
-            cols: 0,
-            rows: 0,
-            space_width_pixels: 0,
-            space_height_pixels: 0,
-        }
-    }
-}
-
-/// This component tags a sprite as map sprite
-pub struct MapEngineSprite;
 
 /*----------------------------------------------------------------------------*/
 
@@ -108,7 +73,7 @@ impl Plugin for MapEnginePlugin {
             // We set it to Loading to start, of course.
             .add_resource(State::new(MapEngineState::Loading))
             // And this global resource holds the texture for our map.
-            .add_resource(MapEngineMap::default())
+            .add_resource(map::Map::default())
             // This stage happens once when entering the Loading state (that is, right away)
             .on_state_enter(
                 MAPENGINE_STAGE,

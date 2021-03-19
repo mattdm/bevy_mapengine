@@ -1,3 +1,9 @@
+/// This module holds structs which define the MapSpace component type
+//
+/*----------------------------------------------------------------------------*/
+//
+
+// This is the basic Bevy game engine stuff
 use bevy::prelude::*;
 
 /// This is a Bevy Component that defines an Entity as representing
