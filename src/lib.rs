@@ -19,6 +19,12 @@ pub use map_space::{MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
 
+pub struct MapEngineConfig {
+    pub tile_folder: String,
+}
+
+/*----------------------------------------------------------------------------*/
+
 /// An internal collection of systems which handles loading tiles from
 /// the given assets folder, and sets the Stage State to Running when
 /// the tiles are all ready.

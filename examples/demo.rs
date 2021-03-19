@@ -21,7 +21,7 @@ use bevy::input::system::exit_on_esc_system;
 use rand::Rng;
 
 // This is ... the thing being demonstrated here :)
-use bevy_mapengine::{MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
+use bevy_mapengine::{MapEngineConfig, MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
 
@@ -99,8 +99,15 @@ fn main() {
         .add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
-        // And this is the MapEngine plugin — the thing we are demonstrating.
-        // FIXME needs a way to configure tile dir and other things
+        // This resource gives the configuration for the MapEngine plugin.
+        // In specific, it tells the folder to load the terrain tiles from.
+        .add_resource(MapEngineConfig {
+            // NEXT adapt library code so it can take either a str or String
+            tile_folder: "terrain".to_string(),
+        })
+        // And this is the MapEngine plugin — it loads all the systems
+        // which handle putting entities with the MapSpace component
+        // onto the actual map.
         .add_plugin(MapEnginePlugin)
         // Now, we are finally on to our own code — that is, stuff here in this demo.
         // The first system is really simple: it sets up a camera. It is a _startup system_,

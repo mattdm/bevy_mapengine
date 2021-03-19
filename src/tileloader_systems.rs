@@ -29,16 +29,16 @@ pub struct MapEngineTileHandles {
 /// we defined above (and initialize as a resource in main()).
 pub fn load_tiles_system(
     asset_server: Res<AssetServer>,
+    map_engine_config: Res<crate::MapEngineConfig>,
     mut tilehandles: ResMut<MapEngineTileHandles>,
 ) {
     // The asset server defaults to looking in the `assets` directory.
-    // This call loads everything in the `terrain` subfolder as our
+    // This call loads everything in the given subfolder as our
     // tile images and stores the list of handles in the global resource.
-    // FIXME don't hard-code "terrain" here but instead get it when setting up the plugin
-    match asset_server.load_folder("terrain") {
+    match asset_server.load_folder(&map_engine_config.tile_folder) {
         Ok(handles) => tilehandles.handles = handles,
         Err(err) => {
-            eprintln!("Error: Problem loading terrain textures ({:?})", err);
+            eprintln!("Error: Problem loading tile textures ({:?})", err);
             std::process::exit(1);
         }
     }
@@ -59,15 +59,15 @@ pub fn wait_for_tile_load_system(
     // Note that this is pretty much always going to be "NotLoaded" until it becomes "Loaded".
     // The "Loading" state is unlikely because get_group_load_state returns not loaded if _any_ are.
     match asset_server.get_group_load_state(tilehandles.handles.iter().map(|handle| handle.id)) {
-        LoadState::NotLoaded => println!("Loading terrain textures..."),
-        LoadState::Loading => println!("Loading terrain textures..."),
+        LoadState::NotLoaded => println!("Loading tile textures..."),
+        LoadState::Loading => println!("Loading tile textures..."),
         LoadState::Loaded => {
             println!("Terrain textures loaded!");
             // Finally advance the State
             state.set_next(crate::MapEngineState::Verifying).unwrap();
         }
         LoadState::Failed => {
-            eprintln!("Failed to load terrain textures!");
+            eprintln!("Failed to load tile textures!");
             std::process::exit(1)
         }
     }
@@ -133,7 +133,7 @@ pub fn verify_tiles_system(
     }
 
     println!(
-        "{:?} terrain textures of size {:?}×{:?} found.",
+        "{:?} tile textures of size {:?}×{:?} found.",
         widths.len(),
         mapengine_map.space_width_pixels,
         mapengine_map.space_height_pixels
