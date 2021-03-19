@@ -74,6 +74,8 @@ First priorities
 Medium-term
 -----------
 
+* Consider whether we care about being pixel perfect (better for pixel
+  art aesthetic), and perhaps give options to link to integer× scaling.
 * Cope with resizeable windows
 * Performance: don't render offscreen (but do on zoom or scroll!)
 * Layers
