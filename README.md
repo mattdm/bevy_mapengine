@@ -61,6 +61,19 @@ be useful for simple games. Luckily, all of this is behind the scenes.
 When Bevy gets support for doing this in a fast way, switching to that
 should be seamless the point of view of a user of the plugin.
 
+Anyway, from a practical point of view this means:
+
+1. Don't change spaces too often, because it is expensive.
+2. Making a big map is okay in terms of FPS — it just costs memory.
+3. And speaking of which, really big maps will make your GPU run out of
+   memory. Or maybe even just use up all of your RAM. Fixing that is
+   in the long term plans, not the short term ones. 
+
+So in summary: with tiles of 64×64, a 100×100 map isn't awful, and you
+can get away with up to 256×256 on many modern GPUs, but as it stands
+this is really better for maps more like 64×36 (or larger with smaller
+tiles).
+
 Terminology
 -----------
 
@@ -90,6 +103,7 @@ First priorities
 Medium-term
 -----------
 
+* Allow changing / deleting map spaces rather than just adding them.
 * Consider whether we care about being pixel perfect (better for pixel
   art aesthetic), and perhaps give options to link to integer× scaling.
 * Cope with resizeable windows
@@ -106,6 +120,7 @@ After that...
 * (Optional) Automatic selection of border tile images for prettiness
 * Pathfinding?
   - ideally integration rather than diy
+* Animated spaces
 * Collision detection
 * Arbitrary rotation?
 * Chunks for arbitrarily-large maps
