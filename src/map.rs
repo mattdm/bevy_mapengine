@@ -16,6 +16,8 @@ use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 /// This component tags a sprite as map sprite
 pub struct MapEngineSprite;
 
+/*----------------------------------------------------------------------------*/
+
 /// This is for the global resource that holds our map information.
 pub struct Map {
     /// The actual texture to be drawn on
