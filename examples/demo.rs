@@ -374,7 +374,9 @@ fn maptexture_update_system(
     // This first pass gathers information needed to size the map texture,
     // and if we need to do anything at all.
     // TODO This doubles the number of times we go through the list;
-    // consider if it is really the best way.
+    // consider if it is really the best way. (One idea for an alternate
+    // approach: check the map size when spawning a new mapspace, and
+    // mark it to grow if need be then.)
     let mut count = 0;
     for (_entity, mapspace) in mapspaces.iter() {
         // Find the furthest-from 0,0 rows and columns.
@@ -459,6 +461,8 @@ fn maptexture_update_system(
         materials.get_mut(material).unwrap().texture = Some(map_texture_handle);
     };
 }
+
+/*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
 
