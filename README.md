@@ -54,17 +54,31 @@ textures. Hopefully this will be implemented soon. (See
 for details.) In the meantime, this plugin copies image pixel data using
 the CPU in a pretty simple way. This is not good for anything but
 infrequent updates. Additionally, there is no render batching, so
-updating a bunch of map cells at once will be quite slow.
+updating a bunch of map spaces at once will be quite slow.
 
 However, this will do while working on basic functionality, and may even
 be useful for simple games. Luckily, all of this is behind the scenes.
 When Bevy gets support for doing this in a fast way, switching to that
 should be seamless the point of view of a user of the plugin.
 
+Terminology
+-----------
+
+Make sure you're comfortable with Bevy's
+[ECS](https://bevy-cheatbook.github.io/basics/ec.html)) concepts to
+start. In Bevy, an Entity of a certain "type" is simply one which
+happens to have a component of that type. So, a "Sprite" is an Entity with the Sprite component. It's usually created as a "SpriteBundle", which adds 
+
+This library introduces two new types of entities: `Map` and `MapSpace`. 
+
+A "Sprite" in Bevy is an Entity usually created as a SpriteBundle, which is a collection of components with information for the rendering system, including a material — a Texture and a Color. In the future, it may be that indivual 
+
+
+
 First priorities
 ----------------
 
-- [x] Load and display a grid of cells.
+- [x] Load and display a grid of spaces.
 - [ ] Refactor code from demo into actual library
 - [ ] Example which shows mouse-over
 - [ ] Scrolling (with WASD and mouse examples)
@@ -79,7 +93,7 @@ Medium-term
 * Cope with resizeable windows
 * Performance: don't render offscreen (but do on zoom or scroll!)
 * Layers
-  - to be decided: separate entities or multiple textures in same cell?
+  - to be decided: separate entities or multiple textures in same space?
 * Position info for non-mapped sprites.
 * Different views into same map (for mini-map)
 * Swap texture sizes based on zoom
@@ -116,7 +130,7 @@ initially focused on chunk loading and related things, while I'm focused
 more on the UI and things like correlating clicks to tiles.
 
 With Bevy Tilemap, tiles are added to a data structure held by the
-Tilemap itself. Here, instead, each cell is actually an Entity in Bevy.
+Tilemap itself. Here, instead, each space is actually an Entity in Bevy.
 
 Who are you then?
 -----------------

@@ -56,7 +56,7 @@ struct MapCell {
     texture_handle: Handle<Texture>,
 }
 
-/// This component signals that a mapcell needs to be refreshed.
+/// This component signals that a MapSpace needs to be refreshed.
 /// This is a hack until https://github.com/bevyengine/bevy/pull/1471 is implemented.
 struct MapCellRefreshNeeded;
 
@@ -78,14 +78,14 @@ struct MapEngineTileHandles {
 struct MapEngineMap {
     /// The actual texture to be drawn on
     texture: Texture,
-    /// Width of map in cells (texture width = cols × cell_width_pixels)
+    /// Width of map in spaces (texture width = cols × space_width_pixels)
     cols: i32,
-    /// Height of map in cells (texture height = rows × cell_height_pixels)
+    /// Height of map in spaces (texture height = rows × space_height_pixels)
     rows: i32,
-    /// Each cell must be the same; keeping it here saves us reading it later.
-    cell_width_pixels: usize,
-    /// Each cell must be the same; keeping it here saves us reading it later.
-    cell_height_pixels: usize,
+    /// Each space must be the same; keeping it here saves us reading it later.
+    space_width_pixels: usize,
+    /// Each space must be the same; keeping it here saves us reading it later.
+    space_height_pixels: usize,
 }
 
 /// This component tags a sprite as map sprite
@@ -105,8 +105,8 @@ impl Default for MapEngineMap {
             ),
             cols: 0,
             rows: 0,
-            cell_width_pixels: 0,
-            cell_height_pixels: 0,
+            space_width_pixels: 0,
+            space_height_pixels: 0,
         }
     }
 }
@@ -234,19 +234,19 @@ fn verify_tiles_system(
         .map(|handle| textures.get(handle).unwrap().size.depth)
         .collect::<Vec<u32>>();
 
-    mapengine_map.cell_width_pixels = widths[0] as usize;
-    mapengine_map.cell_height_pixels = widths[0] as usize;
+    mapengine_map.space_width_pixels = widths[0] as usize;
+    mapengine_map.space_height_pixels = widths[0] as usize;
 
     if widths
         .iter()
-        .any(|&w| w != mapengine_map.cell_width_pixels as u32)
+        .any(|&w| w != mapengine_map.space_width_pixels as u32)
     {
         eprintln!("Error! All tile textures must be the same width (at least one isn't).");
         std::process::exit(1)
     }
     if heights
         .iter()
-        .any(|&h| h != mapengine_map.cell_height_pixels as u32)
+        .any(|&h| h != mapengine_map.space_height_pixels as u32)
     {
         eprintln!("Error! All tile textures must be the same height (at least one isn't).");
         std::process::exit(1)
@@ -259,8 +259,8 @@ fn verify_tiles_system(
     println!(
         "{:?} terrain textures of size {:?}×{:?} found.",
         widths.len(),
-        mapengine_map.cell_width_pixels,
-        mapengine_map.cell_height_pixels
+        mapengine_map.space_width_pixels,
+        mapengine_map.space_height_pixels
     );
 
     state.set_next(MapEngineState::Running).unwrap();
@@ -308,6 +308,7 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
                 _ => "terrain/grass2.png",
             };
 
+            // TODO Don't spawn MapCell entities directly, but rather request for their creation.
             commands
                 .spawn((MapCell {
                     col: col,
@@ -346,9 +347,9 @@ fn create_map_sprite_system(
         .with(MapEngineSprite);
 }
 
-/// Draw cells that need updated onto the map texture.
+/// Draw spaces that need updated onto the map texture.
 ///
-/// TODO Handle removal of cells, not just addition
+/// TODO Handle removal of spaces, not just addition
 ///
 /// This runs every frame when the engine is in the Running state, so it
 /// is important to not do slow things. Unfortunately, because Bevy
@@ -363,7 +364,7 @@ fn maptexture_update_system(
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut mapengine_map: ResMut<MapEngineMap>,
-    mapcells: Query<(Entity, &MapCell), With<MapCellRefreshNeeded>>,
+    mapspaces: Query<(Entity, &MapCell), With<MapCellRefreshNeeded>>,
     mapsprites: Query<&Handle<ColorMaterial>, With<MapEngineSprite>>,
 ) {
     // MapCells are entities in the World. They should be tagged
@@ -375,12 +376,12 @@ fn maptexture_update_system(
     // TODO This doubles the number of times we go through the list;
     // consider if it is really the best way.
     let mut count = 0;
-    for (_entity, mapcell) in mapcells.iter() {
+    for (_entity, mapspace) in mapspaces.iter() {
         // Find the furthest-from 0,0 rows and columns.
         // The +1 is because we are zero-indexed, so if everything is in col 0
-        // we still need a cell_width-wide map.
-        mapengine_map.cols = cmp::max(mapengine_map.cols, mapcell.col + 1);
-        mapengine_map.rows = cmp::max(mapengine_map.rows, mapcell.row + 1);
+        // we still need a space_width-wide map.
+        mapengine_map.cols = cmp::max(mapengine_map.cols, mapspace.col + 1);
+        mapengine_map.rows = cmp::max(mapengine_map.rows, mapspace.row + 1);
         count += 1;
     }
     // If there aren't any, exit now.
@@ -391,24 +392,25 @@ fn maptexture_update_system(
 
     // We need to copy these out of the resource because later there's
     // a mutable+immutable borrow attempt if we don't have our own copy.
-    let cell_width_pixels = mapengine_map.cell_width_pixels;
-    let cell_height_pixels = mapengine_map.cell_height_pixels;
+    let space_width_pixels = mapengine_map.space_width_pixels;
+    let space_height_pixels = mapengine_map.space_height_pixels;
 
     // If our existing texture is too small, create a new bigger one.
-    if mapengine_map.texture.size.width < mapengine_map.cols as u32 * cell_width_pixels as u32
-        || mapengine_map.texture.size.height < mapengine_map.rows as u32 * cell_height_pixels as u32
+    if mapengine_map.texture.size.width < mapengine_map.cols as u32 * space_width_pixels as u32
+        || mapengine_map.texture.size.height
+            < mapengine_map.rows as u32 * space_height_pixels as u32
     {
         println!(
             "Resizing map texture from {:?}×{:?} to {:?}×{:?}.",
             mapengine_map.texture.size.width,
             mapengine_map.texture.size.height,
-            mapengine_map.cols as u32 * cell_width_pixels as u32,
-            mapengine_map.rows as u32 * cell_height_pixels as u32,
+            mapengine_map.cols as u32 * space_width_pixels as u32,
+            mapengine_map.rows as u32 * space_height_pixels as u32,
         );
         let mut new_texture = Texture::new_fill(
             Extent3d::new(
-                mapengine_map.cols as u32 * cell_width_pixels as u32,
-                mapengine_map.rows as u32 * cell_height_pixels as u32,
+                mapengine_map.cols as u32 * space_width_pixels as u32,
+                mapengine_map.rows as u32 * space_height_pixels as u32,
                 1,
             ),
             TextureDimension::D2,
@@ -426,15 +428,15 @@ fn maptexture_update_system(
     }
 
     // And now we iterate through again and do the actual copying
-    for (entity, mapcell) in mapcells.iter() {
-        // Each cell has a handle to the texture which should represent it visually
-        match textures.get(&mapcell.texture_handle) {
-            Some(cell_texture) => {
+    for (entity, mapspace) in mapspaces.iter() {
+        // Each space has a handle to the texture which should represent it visually
+        match textures.get(&mapspace.texture_handle) {
+            Some(space_texture) => {
                 copy_texture(
                     &mut mapengine_map.texture,
-                    &cell_texture,
-                    mapcell.col as usize * cell_width_pixels,
-                    mapcell.row as usize * cell_height_pixels,
+                    &space_texture,
+                    mapspace.col as usize * space_width_pixels,
+                    mapspace.row as usize * space_height_pixels,
                 );
             }
             None => {
@@ -548,8 +550,8 @@ fn main() {
         )
         // FUTURE add a validator which runs periodically and checks for overlapping MapCells?
         // NEXT add a system which takes mouse events and translates them into new events that
-        // correspond to the mapcell location (enter, exit, click -- maybe motion?)
-        // NEXT possibly also a global resource for current hovered or selected mapcell entity?
+        // correspond to the mapspace location (enter, exit, click -- maybe motion?)
+        // NEXT possibly also a global resource for current hovered or selected mapspace entity?
         // FUTURE map scrolling (with the mouse stuff still working!)
         // FUTURE map zooming (with the mouse stuff still working!)
         //
