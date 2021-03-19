@@ -197,7 +197,7 @@ fn wait_for_tile_load_system(
     }
 }
 
-/// A system which shecs to make sure all of the loaded tiles are
+/// A system which checks to make sure all of the loaded tiles are
 /// valid and then advances to the next game State (Running).
 /// A more advanced version of this could go to an Error state
 /// instead of existing on failure. Combined with dynamic asset
