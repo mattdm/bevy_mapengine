@@ -116,13 +116,21 @@ initially focused on chunk loading and related things, while I'm focused
 more on the UI and things like correlating clicks to tiles.
 
 With Bevy Tilemap, tiles are added to a data structure held by the
-Tilemap itself. Here instead each cell is actually an Entity in Bevy.
+Tilemap itself. Here, instead, each cell is actually an Entity in Bevy.
 
 Who are you then?
 -----------------
 
 Not a Bevy expert, nor a Rust one. Just wanted to make something for
-myself, and hopefully useful to others as well.
+myself, and hopefully useful to others as well. The Bevy project's
+current development focus areas aren't really on 2D tile-based games,
+and so this is one attempt to make things as easy as possible with what
+we have.
+
+So, not all of my ideas here are going to be the best ones. And behind
+the scenes, there will be a lot of kludges. But hopefully putting this
+out there as an example can demonstrate use cases and needs and end up
+making Bevy better for everyone.
 
 License
 -------
