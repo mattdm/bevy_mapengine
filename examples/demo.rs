@@ -464,6 +464,73 @@ fn maptexture_update_system(
 
 /*----------------------------------------------------------------------------*/
 
+pub struct MapEnginePlugin;
+
+impl Plugin for MapEnginePlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        // A stash of handles to our image tiles, so we can use them everywhere.
+        app.init_resource::<MapEngineTileHandles>()
+            // This adds a "Stage" (basically, a group of systems) set up to handle our
+            // various "States". Our stage, used in the MapEngine, will run right after
+            // the default UPDATE stage. This is important because otherwise we will miss
+            // changes to MapCell entities done in the plugin user's code.
+            // See https://bevy-cheatbook.github.io/basics/stages.html for more on stages.
+            .add_stage_after(
+                stage::UPDATE,
+                MAPENGINE_STAGE,
+                StateStage::<MapEngineState>::default(),
+            )
+            // This global resource tracks the state used in this stage.
+            // We set it to Loading to start, of course.
+            .add_resource(State::new(MapEngineState::Loading))
+            // And this global resource holds the texture for our map.
+            .add_resource(MapEngineMap::default())
+            // This stage happens once when entering the Loading state (that is, right away)
+            .on_state_enter(
+                MAPENGINE_STAGE,
+                MapEngineState::Loading,
+                load_tiles_system.system(),
+            )
+            // And this stage runs every frame while still in Loading state
+            // (and is responsible for changing the state to Checking when ready)
+            .on_state_update(
+                MAPENGINE_STAGE,
+                MapEngineState::Loading,
+                wait_for_tile_load_system.system(),
+            )
+            // This stage makes sure that our tiles are valid and stores information
+            // about them in the global MapEngineMap resource, and then advances
+            // the state to Running. It exits on failure; we could get even more
+            // fancy and instead have an Error state which presents error messages in-game.
+            .on_state_enter(
+                MAPENGINE_STAGE,
+                MapEngineState::Verifying,
+                verify_tiles_system.system(),
+            )
+            // When we get to the Running state, add our map sprite
+            .on_state_enter(
+                MAPENGINE_STAGE,
+                MapEngineState::Running,
+                create_map_sprite_system.system(),
+            )
+            // This system runs every frame once we are in the Running state.
+            // Because it happens all the time, it needs to be careful to not
+            // do slow things. See the code in the maptexture_update_system itself.
+            .on_state_update(
+                MAPENGINE_STAGE,
+                MapEngineState::Running,
+                maptexture_update_system.system(),
+            );
+        // FUTURE add a validator which runs periodically and checks for overlapping MapCells?
+        // NEXT add a system which takes mouse events and translates them into new events that
+        // correspond to the mapspace location (enter, exit, click -- maybe motion?)
+        // NEXT possibly also a global resource for current hovered or selected mapspace entity?
+        // FUTURE map scrolling (with the mouse stuff still working!)
+        // FUTURE map zooming (with the mouse stuff still working!)
+        //
+    }
+}
+
 /*----------------------------------------------------------------------------*/
 
 fn main() {
@@ -491,74 +558,16 @@ fn main() {
         .add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
+        // And this is the MapEngine plugin — the thing we are demonstrating.
+        .add_plugin(MapEnginePlugin)
         // Now, we are finally on to our own code — that is, stuff here in this demo.
         // The first system is really simple: it sets up a camera. It is a _startup system_,
         // which means it only runs once at the beginning, before everything else.
-        // This won't be part of our plugin -- it'll be expected that the game using our
+        // This won't be part of our plugin — it'll be expected that the game using our
         // plugin will do this.
         .add_startup_system(setup_camera_system.system())
         // This inserts MapCell entities from which the map will be built.
         .add_startup_system(setup_demo_map_system.system())
-        // A stash of handles to our image tiles, so we can use them everywhere.
-        .init_resource::<MapEngineTileHandles>()
-        // This adds a "Stage" (basically, a group of systems) set up to handle our
-        // various "States". Our stage, used in the MapEngine, will run right after
-        // the default UPDATE stage. This is important because otherwise we will miss
-        // changes to MapCell entities done in the plugin user's code.
-        // See https://bevy-cheatbook.github.io/basics/stages.html for more on stages.
-        .add_stage_after(
-            stage::UPDATE,
-            MAPENGINE_STAGE,
-            StateStage::<MapEngineState>::default(),
-        )
-        // This global resource tracks the state used in this stage.
-        // We set it to Loading to start, of course.
-        .add_resource(State::new(MapEngineState::Loading))
-        // And this global resource holds the texture for our map.
-        .add_resource(MapEngineMap::default())
-        // This stage happens once when entering the Loading state (that is, right away)
-        .on_state_enter(
-            MAPENGINE_STAGE,
-            MapEngineState::Loading,
-            load_tiles_system.system(),
-        )
-        // And this stage runs every frame while still in Loading state
-        // (and is responsible for changing the state to Checking when ready)
-        .on_state_update(
-            MAPENGINE_STAGE,
-            MapEngineState::Loading,
-            wait_for_tile_load_system.system(),
-        )
-        // This stage makes sure that our tiles are valid and stores information
-        // about them in the global MapEngineMap resource, and then advances
-        // the state to Running. It exits on failure; we could get even more
-        // fancy and instead have an Error state which presents error messages in-game.
-        .on_state_enter(
-            MAPENGINE_STAGE,
-            MapEngineState::Verifying,
-            verify_tiles_system.system(),
-        )
-        // When we get to the Running state, add our map sprite
-        .on_state_enter(
-            MAPENGINE_STAGE,
-            MapEngineState::Running,
-            create_map_sprite_system.system(),
-        )
-        // This system runs every frame once we are in the Running state.
-        // Because it happens all the time, it needs to be careful to not
-        // do slow things. See the code in the maptexture_update_system itself.
-        .on_state_update(
-            MAPENGINE_STAGE,
-            MapEngineState::Running,
-            maptexture_update_system.system(),
-        )
-        // FUTURE add a validator which runs periodically and checks for overlapping MapCells?
-        // NEXT add a system which takes mouse events and translates them into new events that
-        // correspond to the mapspace location (enter, exit, click -- maybe motion?)
-        // NEXT possibly also a global resource for current hovered or selected mapspace entity?
-        // FUTURE map scrolling (with the mouse stuff still working!)
-        // FUTURE map zooming (with the mouse stuff still working!)
-        //
         // And finally, this, which fires off the actual game loop.
         .run()
 }
