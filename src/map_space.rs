@@ -17,7 +17,7 @@ use bevy::prelude::*;
 /// FUTURE make texture_handle a Vec, and draw in order?
 /// The other layering approach (adding depth, allowing multiple col,row)
 /// has the disadvantage that we need to find all of the entities to draw.
-// FIXME texture handle should not need to be public, so we need a constructor
+// TODO texture handle should not need to be public, so we need a constructor
 #[derive(Debug)]
 pub struct MapSpace {
     /// Column (x) position of this tile on the map. 0 is on the left.
