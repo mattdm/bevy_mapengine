@@ -93,9 +93,6 @@ pub struct MapEngineMap {
     space_height_pixels: usize,
 }
 
-/// This component tags a sprite as map sprite
-struct MapEngineSprite;
-
 impl Default for MapEngineMap {
     /// default to an empty texture
     fn default() -> Self {
@@ -115,6 +112,9 @@ impl Default for MapEngineMap {
         }
     }
 }
+
+/// This component tags a sprite as map sprite
+struct MapEngineSprite;
 
 /*----------------------------------------------------------------------------*/
 
