@@ -67,12 +67,14 @@ Terminology
 Make sure you're comfortable with Bevy's
 [ECS](https://bevy-cheatbook.github.io/basics/ec.html)) concepts to
 start. In Bevy, an Entity of a certain "type" is simply one which
-happens to have a component of that type. So, a "Sprite" is an Entity with the Sprite component. It's usually created as a "SpriteBundle", which adds 
+happens to have a component of that type. So, a "Sprite" is an Entity
+with the Sprite component. It's usually created as a "SpriteBundle",
+which adds components with information for the rendering system,
+including a material — a Texture and a Color.
 
-This library introduces two new types of entities: `Map` and `MapSpace`. 
-
-A "Sprite" in Bevy is an Entity usually created as a SpriteBundle, which is a collection of components with information for the rendering system, including a material — a Texture and a Color. In the future, it may be that indivual 
-
+This library introduces two new types of Entities: `Map` and `MapSpace`.
+Why not "MapTile"? I use "tile" to refer to the images (probably from a
+"tileset") used to display "spaces".
 
 
 First priorities
