@@ -20,6 +20,12 @@ pub use tile_mouse_events::*;
 
 /*----------------------------------------------------------------------------*/
 
+/// This struct is a Component used to tag the camera which is used for
+/// rendering the map.
+pub struct MapEngineCamera;
+
+/*----------------------------------------------------------------------------*/
+
 /// This will eventually hold all parameters a user might want to configure.
 /// But for now, just the tile folder.
 /// FUTURE use the builder pattern here

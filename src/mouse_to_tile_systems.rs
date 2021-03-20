@@ -14,6 +14,9 @@ use bevy::input::mouse::MouseButtonInput;
 // TODO deal with CursorLeft as well.
 use bevy::window::CursorMoved;
 
+// Used to find the camera
+use bevy::render::camera::{Camera, OrthographicProjection};
+
 // Import all of the event structs directly
 use crate::tile_mouse_events::*;
 
@@ -33,22 +36,45 @@ pub struct EventReaderState {
 /// We don't need to set it up; it is created as part of the App in main,
 /// below.)
 ///
+/// This is adapted from https://bevy-cheatbook.github.io/cookbook/cursor2world.html
 pub fn mouse_to_tile_system(
     mut eventreaders: Local<EventReaderState>,
     mouse_button_input_events: Res<Events<MouseButtonInput>>,
     cursor_moved_events: Res<Events<CursorMoved>>,
+    windows: Res<Windows>,
+    query_camera: Query<
+        &Transform,
+        (
+            With<Camera>,
+            With<OrthographicProjection>,
+            With<crate::MapEngineCamera>,
+        ),
+    >,
     //commands: &mut Commands,
 ) {
+    //
+    //
+    // FUTURE Handle multiple map cameras (possibly for a mini-map, etc)
+    let camera_transform = query_camera.iter().next().unwrap();
+
     for event in eventreaders
         .mouse_button_event_reader
         .iter(&mouse_button_input_events)
     {
-        println!("{:?}", event);
+        //println!("{:?}", event);
     }
     for event in eventreaders
         .cursor_moved_event_reader
         .iter(&cursor_moved_events)
     {
-        println!("{:?}", event);
+        // Get the size of the window this event is for.
+        let window = windows.get(event.id).unwrap();
+        let window_size = Vec2::new(window.width() as f32, window.height() as f32);
+
+        // The default orthographic projection is in pixels from the center;
+        // This just undoes that translation.=
+        let p = event.position - window_size / 2.0;
+
+        println!("{:?} -> {:?}", event, p);
     }
 }

@@ -21,16 +21,20 @@ use bevy::input::system::exit_on_esc_system;
 use rand::prelude::*;
 
 // This is ... the thing being demonstrated here :)
-use bevy_mapengine::{tile_mouse_events::*, MouseToTilePlugin};
+use bevy_mapengine::{tile_mouse_events::*, MapEngineCamera, MouseToTilePlugin};
 use bevy_mapengine::{MapEngineConfig, MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
 
 /// A very simple system which just makes it so we can see the world.
 fn setup_camera_system(commands: &mut Commands) {
-    // This sets up the default 2d camera, which has an orthgraphic (staight ahead,
-    // everything square-on) view.
-    commands.spawn(Camera2dBundle::default());
+    commands
+        // This sets up the default 2d camera, which has an orthgraphic
+        // (staight ahead, everything square-on) view.
+        .spawn(Camera2dBundle::default())
+        // And this component is used so we can find this specific camera
+        // for panning, zooming, etc., and translating clicks to tiles.
+        .with(MapEngineCamera);
 }
 
 /// This is a one-time system that spawns some MapSpace components.

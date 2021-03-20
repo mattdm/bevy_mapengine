@@ -20,8 +20,16 @@ games in Bevy.
 A lot of this is kludging around functionality that just isn't there yet
 in Bevy itself. My hope is for most of that to go away, and in fact
 perhaps all of the drawing-related parts of this plugin might become
-obsolete, leaving it just a convienent way to manage the camera and
-scroll/zoom with a 2D tilemap. But we'll see how it all goes!
+obsolete, leaving it to focus on the aspects of actually mananging the map.
+
+I also am currently planning to split the mouse-to-tile plugin into its
+own separate crate. Theoretically that should be nicely usable with any
+tile map implementation that observes the same basic layout.
+
+And speaking of layout: 
+
+* TODO: refactor so 0,0 is in the center of the map. (With advanced
+  option for center or edge alignment.)
 
 Try it!
 -------
