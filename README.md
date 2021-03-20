@@ -96,6 +96,10 @@ This library introduces two new types of Entities: `Map` and `MapSpace`.
 Why not "MapTile"? I use "tile" to refer to the images (probably from a
 "tileset") used to display "spaces".
 
+_However_, I am currently not consistent with that for the mouse stuff,
+where "tile" just seems more natural. I will figure out how to reconcile
+that at some point in the future.
+
 
 First priorities
 ----------------

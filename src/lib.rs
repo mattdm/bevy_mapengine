@@ -16,6 +16,7 @@
 use bevy::prelude::*;
 
 pub use map_space::{MapSpace, MapSpaceRefreshNeeded};
+pub use tile_mouse_events::*;
 
 /*----------------------------------------------------------------------------*/
 
@@ -52,11 +53,17 @@ mod map_space;
 /// For the actual representation of the tile map
 mod map;
 
+// Systems — well, _a_ system — which translates mouse events to corresponding
+// TileMouse events.
+mod mouse_to_tile_systems;
+
+// The actual TileMouse events are defined here
+pub mod tile_mouse_events;
+
 /*----------------------------------------------------------------------------*/
 
 /// Bevy groups systems into stages. Our mapengine
 /// runs in its own stage, and this is its name.
-/// See main() for how this is actually used.
 const MAPENGINE_STAGE: &str = "mapengine_stage";
 
 /// Bevy does "lazy" loading of assets. We switch from the
@@ -71,6 +78,8 @@ pub enum MapEngineState {
 
 /*----------------------------------------------------------------------------*/
 
+/// This Bevy Plugin handles creation of an aggregated map Sprite
+/// (a MapEngineSprite) from Entities with the MapSpace component.
 pub struct MapEnginePlugin;
 
 impl Plugin for MapEnginePlugin {
@@ -134,5 +143,21 @@ impl Plugin for MapEnginePlugin {
         // NEXT possibly also a global resource for current hovered or selected mapspace entity?
         // FUTURE map scrolling (with the mouse stuff still working!)
         // FUTURE map zooming (with the mouse stuff still working!)
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+/// This Bevy Plugin translates standard Bevy mouse events to TileMouse events.
+/// It runs in the `FIRST` stage, so events are available in the
+/// `PRE_UPDATE` and `UPDATE` stages later on in the frame.
+pub struct MouseToTilePlugin;
+
+impl Plugin for MouseToTilePlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system_to_stage(
+            stage::FIRST,
+            mouse_to_tile_systems::mouse_to_tile_system.system(),
+        );
     }
 }

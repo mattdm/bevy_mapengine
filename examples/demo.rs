@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 
 // Built-in Bevy plugins to print FPS to console.
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
+//use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
@@ -21,6 +21,7 @@ use bevy::input::system::exit_on_esc_system;
 use rand::prelude::*;
 
 // This is ... the thing being demonstrated here :)
+use bevy_mapengine::{tile_mouse_events::*, MouseToTilePlugin};
 use bevy_mapengine::{MapEngineConfig, MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
@@ -100,8 +101,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
         // FUTURE add a command line option to turn these two on or off instead of messing with comments
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(PrintDiagnosticsPlugin::default())
+        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
+        //.add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
         // This resource gives the configuration for the MapEngine plugin.
@@ -111,6 +112,12 @@ fn main() {
         // which handle putting entities with the MapSpace component
         // onto the actual map.
         .add_plugin(MapEnginePlugin)
+        // This plugin receives mouse events and sends tile_mouse events, which
+        // your systems can pick up. It's possible I'll move this out of this
+        // crate into its entire own thing; it should work with any Bevy tile system
+        // where there the tile map is a centered, regular rectangular grid and where
+        // panning and zooming is done by moving the 2d camera.
+        .add_plugin(MouseToTilePlugin)
         // Now, we are finally on to our own code — that is, stuff here in this demo.
         // The first system is really simple: it sets up a camera. It is a _startup system_,
         // which means it only runs once at the beginning, before everything else.
