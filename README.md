@@ -36,6 +36,13 @@ art pack from [Kenney](https://kenney.nl/assets/medieval-rts).
 
 The demo is well-commented and currently serves as usage documentation.
 
+Use it!
+-------
+
+TODO: put basic usage instructions here. 
+
+In the meantime, look at the `[demo.rs](examples/demo.rs)` code.
+
 Bevy version?
 -------------
 
