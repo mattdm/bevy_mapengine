@@ -36,8 +36,8 @@ fn setup_camera_system(commands: &mut Commands) {
 /// For a future phase of this demo we'll need something more sophisticated,
 /// but this works for now. It needs Commands to do the spawning, and the
 /// AssetServer resource to get the handles for textures by name.
-// FUTURE Maybe parse a text file or multi-line string with character
-// representations of the map?
+/// FUTURE Maybe parse a text file or multi-line string with character
+/// representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
     // We're going to put down a bunch of stuff at random, so we
     // will need a random number generator. And, for this demo,

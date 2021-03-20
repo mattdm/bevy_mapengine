@@ -36,8 +36,8 @@ impl Default for Map {
     /// default to an empty texture
     fn default() -> Self {
         Map {
-            // We start with the minimum possible texture size: 1×1
-            // FUTURE have a reasonable default and make configurable
+            /// We start with the minimum possible texture size: 1×1
+            /// FUTURE have a reasonable default and make configurable
             texture: Texture::new_fill(
                 Extent3d::new(1, 1, 1),
                 TextureDimension::D2,
