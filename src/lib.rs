@@ -19,8 +19,20 @@ pub use map_space::{MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
 
+/// This will eventually hold all parameters a user might want to configure.
+/// But for now, just the tile folder.
+/// FUTURE use the builder pattern here
 pub struct MapEngineConfig {
     pub tile_folder: String,
+}
+
+impl MapEngineConfig {
+    /// Create config using either a String or a str
+    pub fn new<S: Into<String>>(tile_folder: S) -> MapEngineConfig {
+        MapEngineConfig {
+            tile_folder: tile_folder.into(),
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------*/

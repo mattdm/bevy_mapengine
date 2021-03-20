@@ -18,7 +18,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 use bevy::input::system::exit_on_esc_system;
 
 // Standard rust things...
-use rand::Rng;
+use rand::prelude::*;
 
 // This is ... the thing being demonstrated here :)
 use bevy_mapengine::{MapEngineConfig, MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
@@ -42,6 +42,7 @@ fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>
     // We're going to put down a bunch of stuff at random, so we
     // will need a random number generator.
     let mut rng = rand::thread_rng();
+    //let mut rng = StdRng::seed_from_u64(42);
 
     for row in 0..12 {
         for col in 0..20 {
@@ -101,10 +102,7 @@ fn main() {
         .add_system(exit_on_esc_system.system())
         // This resource gives the configuration for the MapEngine plugin.
         // In specific, it tells the folder to load the terrain tiles from.
-        .add_resource(MapEngineConfig {
-            // NEXT adapt library code so it can take either a str or String
-            tile_folder: "terrain".to_string(),
-        })
+        .add_resource(MapEngineConfig::new("terrain"))
         // And this is the MapEngine plugin — it loads all the systems
         // which handle putting entities with the MapSpace component
         // onto the actual map.
