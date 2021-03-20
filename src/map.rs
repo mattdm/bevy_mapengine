@@ -18,6 +18,10 @@ pub struct MapEngineSprite;
 
 /*----------------------------------------------------------------------------*/
 
+// NEXT Refactor so 0,0 is the center
+// FUTURE option to center 0,0 tile on window center, or align one of its
+// corners.
+
 /// This is for the global resource that holds our map information.
 pub struct Map {
     /// The actual texture to be drawn on
