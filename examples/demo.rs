@@ -40,9 +40,13 @@ fn setup_camera_system(commands: &mut Commands) {
 // representations of the map?
 fn setup_demo_map_system(commands: &mut Commands, asset_server: Res<AssetServer>) {
     // We're going to put down a bunch of stuff at random, so we
-    // will need a random number generator.
-    let mut rng = rand::thread_rng();
-    //let mut rng = StdRng::seed_from_u64(42);
+    // will need a random number generator. And, for this demo,
+    // rather than the default random number generator which starts
+    // with an actual random seed, here we use a fixed seed so the
+    // demo gets exactly the same results every time it is run.
+    let mut rng = StdRng::seed_from_u64(1337);
+    // Use the following instead if you need an actual random game.
+    //let mut rng = rand::thread_rng();
 
     for row in 0..12 {
         for col in 0..20 {
