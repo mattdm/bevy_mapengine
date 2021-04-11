@@ -3,4 +3,5 @@
 /*----------------------------------------------------------------------------*/
 //
 
+// TODO actually generate those events!
 pub struct _TileMouseEvent {}

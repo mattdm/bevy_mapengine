@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 
 // Built-in Bevy plugins to print FPS to console.
-//use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin};
 
 // Until we have our own keyboard handling, this is handy...
 use bevy::input::system::exit_on_esc_system;
@@ -21,7 +21,8 @@ use bevy::input::system::exit_on_esc_system;
 use rand::prelude::*;
 
 // This is ... the thing being demonstrated here :)
-use bevy_mapengine::{tile_mouse_events::*, MapEngineCamera, MouseToTilePlugin};
+//use bevy_mapengine::{tile_mouse_events::*, MapEngineCamera, MouseToTilePlugin};
+use bevy_mapengine::{MapEngineCamera, MouseToTilePlugin};
 use bevy_mapengine::{MapEngineConfig, MapEnginePlugin, MapSpace, MapSpaceRefreshNeeded};
 
 /*----------------------------------------------------------------------------*/
@@ -105,8 +106,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // These two collect and print frame count statistics to the console
         // FUTURE add a command line option to turn these two on or off instead of messing with comments
-        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
-        //.add_plugin(PrintDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(PrintDiagnosticsPlugin::default())
         // This is a built-in-to-Bevy handy keyboard exit function
         .add_system(exit_on_esc_system.system())
         // This resource gives the configuration for the MapEngine plugin.

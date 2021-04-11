@@ -18,7 +18,7 @@ use bevy::window::CursorMoved;
 use bevy::render::camera::{Camera, OrthographicProjection};
 
 // Import all of the event structs directly
-use crate::tile_mouse_events::*;
+//use crate::tile_mouse_events::*;
 
 /// Used internally to keep our EventReaders' state
 #[derive(Default)]
@@ -55,9 +55,10 @@ pub fn mouse_to_tile_system(
     //
     //
     // FUTURE Handle multiple map cameras (possibly for a mini-map, etc)
-    let camera_transform = query_camera.iter().next().unwrap();
+    let _camera_transform = query_camera.iter().next().unwrap();
 
-    for event in eventreaders
+    // TODO: do stuff!
+    for _event in eventreaders
         .mouse_button_event_reader
         .iter(&mouse_button_input_events)
     {
@@ -73,8 +74,8 @@ pub fn mouse_to_tile_system(
 
         // The default orthographic projection is in pixels from the center;
         // This just undoes that translation.=
-        let p = event.position - window_size / 2.0;
+        let _p = event.position - window_size / 2.0;
 
-        println!("{:?} -> {:?}", event, p);
+        //println!("{:?} -> {:?}", event, p);
     }
 }
