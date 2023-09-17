@@ -3,6 +3,19 @@ bevy_mapengine
 
 A 2D tilemap plugin for the Bevy game engine.
 
+Update (September 2023)
+-----------------------
+
+**This is obsolete.** I was trying to do things which at the time Bevy
+was not quite ready for. And, as things often go, I got distracted with
+other things. Meanwhile, Bevy now has the underlying features to make
+this kind of thing work better, and you probably want to use
+[bevy_ecs_tilemap](https://github.com/StarArawn/bevy_ecs_tilemap). You
+may also be interested in
+[bevy_fast_tilemap](https://github.com/droggelbecher/bevy-fast-tilemap),
+but as of this writing, that is only tested on Windows — it seems to 
+work on X11 on Fedora Linux, but crashes using native Wayland.
+
 Screenshot
 ----------
 
